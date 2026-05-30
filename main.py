@@ -82,11 +82,26 @@ def resolve_startup_state(args: argparse.Namespace) -> AppState | None:
 
     # CLI explicit profile has top priority.
     if args.profile == "dev":
-        return AppState(dev_mode=True, panic_mode=False, enabled=True, overlay_enabled=not args.no_overlay)
+        return AppState(
+            dev_mode=True,
+            panic_mode=False,
+            enabled=True,
+            overlay_enabled=ENABLE_OVERLAY and not args.no_overlay,
+        )
     if args.profile == "live":
-        return AppState(dev_mode=False, panic_mode=False, enabled=True, overlay_enabled=not args.no_overlay)
+        return AppState(
+            dev_mode=False,
+            panic_mode=False,
+            enabled=True,
+            overlay_enabled=ENABLE_OVERLAY and not args.no_overlay,
+        )
     if args.profile == "panic":
-        return AppState(dev_mode=False, panic_mode=True, enabled=True, overlay_enabled=not args.no_overlay)
+        return AppState(
+            dev_mode=False,
+            panic_mode=True,
+            enabled=True,
+            overlay_enabled=ENABLE_OVERLAY and not args.no_overlay,
+        )
 
     # Backward compatibility CLI flags.
     if args.live or args.dev or args.no_overlay or args.no_launcher:
