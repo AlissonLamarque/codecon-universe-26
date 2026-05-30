@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Anti-Burnout - Descanso Obrigatório</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172026;
+      --muted: #52616b;
+      --paper: #f7f3ea;
+      --panel: #fffaf0;
+      --line: #d8cfc0;
+      --rose: #d7335f;
+      --teal: #0f766e;
+      --gold: #b7791f;
+      --blue: #2563eb;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Segoe UI", Arial, sans-serif;
+      background:
+        linear-gradient(135deg, rgba(15, 118, 110, 0.12), transparent 34%),
+        linear-gradient(225deg, rgba(215, 51, 95, 0.12), transparent 32%),
+        var(--paper);
+    }
+
+    main {
+      width: min(1080px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 36px 0 44px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1.15fr 0.85fr;
+      gap: 28px;
+      align-items: stretch;
+      min-height: 320px;
+      border-bottom: 2px solid var(--line);
+      padding-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0 0 14px;
+      font-size: clamp(2.1rem, 5vw, 4.7rem);
+      line-height: 0.95;
+      max-width: 11ch;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 620px;
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.18rem;
+      line-height: 1.6;
+    }
+
+    .notice {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      border: 2px solid var(--ink);
+      border-radius: 8px;
+      background: var(--panel);
+      box-shadow: 8px 8px 0 var(--ink);
+      padding: 24px;
+    }
+
+    .notice strong {
+      color: var(--rose);
+      font-size: 0.95rem;
+      text-transform: uppercase;
+    }
+
+    .notice p {
+      margin: 10px 0 0;
+      font-size: 1.25rem;
+      line-height: 1.45;
+    }
+
+    .guide {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+      margin-top: 28px;
+    }
+
+    section {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 250, 240, 0.8);
+      padding: 20px;
+    }
+
+    section h2 {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 12px;
+      font-size: 1.15rem;
+    }
+
+    .badge {
+      display: inline-grid;
+      place-items: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      color: white;
+      font-weight: 800;
+      background: var(--teal);
+    }
+
+    .breath .badge {
+      background: var(--blue);
+    }
+
+    .body .badge {
+      background: var(--gold);
+    }
+
+    .mind .badge {
+      background: var(--rose);
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 20px;
+      color: var(--muted);
+      line-height: 1.62;
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    .script {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 0.75fr 1.25fr;
+      gap: 18px;
+      align-items: center;
+      background: #172026;
+      color: #fffaf0;
+      border-color: #172026;
+    }
+
+    .script h2,
+    .script p {
+      margin: 0;
+    }
+
+    .script p {
+      color: #f3e7d2;
+      font-size: 1.08rem;
+      line-height: 1.65;
+    }
+
+    .timer {
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1;
+      width: min(220px, 100%);
+      justify-self: center;
+      border: 3px solid #fffaf0;
+      border-radius: 50%;
+      text-align: center;
+      font-size: 2.2rem;
+      font-weight: 800;
+    }
+
+    footer {
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: 0.98rem;
+      text-align: center;
+    }
+
+    @media (max-width: 760px) {
+      main {
+        width: min(100% - 22px, 1080px);
+        padding-top: 22px;
+      }
+
+      .hero,
+      .guide,
+      .script {
+        grid-template-columns: 1fr;
+      }
+
+      .notice {
+        box-shadow: 5px 5px 0 var(--ink);
+      }
+
+      .timer {
+        width: 160px;
+        font-size: 1.7rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="hero">
+      <div>
+        <h1>Descanso obrigatório</h1>
+        <p class="lead">
+          O Anti-Burnout percebeu uma tentativa de produtividade em ambiente não autorizado.
+          Fique aqui comigo por alguns instantes. Seu projeto continua existindo, mas sua coluna
+          pediu uma audiência.
+        </p>
+      </div>
+      <aside class="notice" aria-label="Mensagem do guia">
+        <strong>Guia de relaxamento local</strong>
+        <p>
+          O YouTube não respondeu, então eu assumi o turno. Solte os ombros, descruze a testa
+          e deixe o teclado acreditar que venceu por enquanto.
+        </p>
+      </aside>
+    </div>
+
+    <div class="guide">
+      <section class="breath">
+        <h2><span class="badge">1</span> Respire comigo</h2>
+        <ul>
+          <li>Inspire pelo nariz contando até quatro.</li>
+          <li>Segure o ar por dois segundos, sem transformar isso em reunião.</li>
+          <li>Solte devagar pela boca contando até seis.</li>
+          <li>Repita três vezes e observe se o corpo baixou o volume.</li>
+        </ul>
+      </section>
+
+      <section class="body">
+        <h2><span class="badge">2</span> Ajuste a postura</h2>
+        <ul>
+          <li>Encoste os pés no chão como se eles tivessem cargo fixo.</li>
+          <li>Afaste os ombros das orelhas. Eles não são fones de ouvido.</li>
+          <li>Alongue o pescoço olhando lentamente para a esquerda e para a direita.</li>
+          <li>Relaxe a mandíbula. O bug não melhora quando você morde o próprio crânio.</li>
+        </ul>
+      </section>
+
+      <section>
+        <h2><span class="badge">3</span> Movimente um pouco</h2>
+        <ul>
+          <li>Gire os punhos dez vezes para cada lado.</li>
+          <li>Abra e feche as mãos como se estivesse soltando notificações invisíveis.</li>
+          <li>Levante, se puder, e caminhe até um copo de água.</li>
+          <li>Ao voltar, sente um pouco mais longe da tela.</li>
+        </ul>
+      </section>
+
+      <section class="mind">
+        <h2><span class="badge">4</span> Reorganize os pensamentos</h2>
+        <ul>
+          <li>Nomeie uma coisa que está sob seu controle agora.</li>
+          <li>Nomeie uma coisa que pode esperar quinze minutos.</li>
+          <li>Lembre que descanso não é abandono, é manutenção do equipamento humano.</li>
+          <li>Quando voltar, escolha uma única próxima ação pequena.</li>
+        </ul>
+      </section>
+
+      <section class="script">
+        <div class="timer">90s</div>
+        <div>
+          <h2>Roteiro rápido</h2>
+          <p>
+            Por noventa segundos, você não precisa resolver nada. Olhe para um ponto distante,
+            respire com calma e deixe o corpo sair do modo emergência. Se uma ideia aparecer,
+            cumprimente a ideia e deixe ela esperar na fila. Ela não paga aluguel na sua nuca.
+          </p>
+        </div>
+      </section>
+    </div>
+
+    <footer>
+      Anti-Burnout: protegendo você da perigosa ficção social chamada produtividade infinita.
+    </footer>
+  </main>
+</body>
+</html>
