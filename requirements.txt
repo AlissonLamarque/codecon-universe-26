@@ -1,4 +1,4 @@
-pywin32
-psutil
-pystray
-pillow
+pywin32==311
+psutil==7.2.2
+pystray==0.19.5
+Pillow==12.2.0
