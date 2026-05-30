@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 import webbrowser
 from typing import Iterable
 
@@ -33,7 +34,8 @@ def open_relax_urls(urls: Iterable[str]) -> None:
     for url in urls:
         try:
             webbrowser.open_new_tab(url)
-            time.sleep(0.15)
+            # Small gap helps browser absorb sequential opens more consistently.
+            time.sleep(0.12)
         except Exception:
             # Ignore failure and continue with next URL.
             pass

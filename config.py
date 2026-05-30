@@ -2,7 +2,9 @@ import os
 
 # Core behavior
 POLL_INTERVAL_SECONDS = 0.30
-BLOCK_COOLDOWN_SECONDS = 2.0
+# Cooldown for normal rest-mode intervention.
+# Kept short so repeated productive attempts are blocked again quickly.
+BLOCK_COOLDOWN_SECONDS = 0.50
 PANIC_COOLDOWN_SECONDS = 1.2
 
 # Escalation schedules (seconds)

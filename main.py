@@ -161,6 +161,8 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
             log_event("RELAX_MEDIA_OPENED", level=media_level, reason=reason)
 
         snap = state.snapshot()
+        # In REST mode, keep intervention aggressive: every new productive attempt
+        # should be minimized and redirected to relax content.
         cooldown = PANIC_COOLDOWN_SECONDS if snap["panic_mode"] else BLOCK_COOLDOWN_SECONDS
         if snap["enabled"] and state.cooldown_ok(cooldown):
             info = get_active_window_info()
