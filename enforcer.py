@@ -1,39 +1,32 @@
 from __future__ import annotations
 
-import time
 import webbrowser
 from typing import Iterable
 
-import psutil
 import win32con
 import win32gui
 
 
-def close_window_gracefully(hwnd: int) -> bool:
+def _minimize_window(hwnd: int) -> bool:
     try:
-        win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+        if not win32gui.IsWindow(hwnd):
+            return False
+        win32gui.ShowWindow(hwnd, win32con.SW_FORCEMINIMIZE)
         return True
     except Exception:
-        return False
-
-
-def kill_process(pid: int) -> bool:
-    try:
-        process = psutil.Process(pid)
-        process.terminate()
+        # Fallback to regular minimize if force minimize fails.
         try:
-            process.wait(timeout=1.0)
+            if not win32gui.IsWindow(hwnd):
+                return False
+            win32gui.ShowWindow(hwnd, win32con.SW_MINIMIZE)
+            return True
         except Exception:
-            process.kill()
-        return True
-    except (psutil.NoSuchProcess, psutil.AccessDenied):
-        return False
+            return False
 
 
 def block_productive_window(hwnd: int, pid: int) -> None:
-    close_window_gracefully(hwnd)
-    time.sleep(0.2)
-    kill_process(pid)
+    # Intentionally non-destructive: keep the app alive and only minimize.
+    _minimize_window(hwnd)
 
 
 def open_relax_urls(urls: Iterable[str]) -> None:
