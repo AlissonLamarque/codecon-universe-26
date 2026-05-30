@@ -45,4 +45,3 @@ def show_alert_overlay(message: str, duration_seconds: int = 4) -> None:
             return
 
     threading.Thread(target=_run, daemon=True).start()
-

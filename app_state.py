@@ -19,6 +19,7 @@ class AppState:
     rest_seconds_current: int = 0
     work_seconds_current: int = 0
     last_block_at: float = 0.0
+    last_media_at: float = 0.0
     lock: threading.Lock = field(default_factory=threading.Lock)
 
     def snapshot(self) -> dict:
@@ -36,6 +37,7 @@ class AppState:
                 "rest_seconds_current": self.rest_seconds_current,
                 "work_seconds_current": self.work_seconds_current,
                 "last_block_at": self.last_block_at,
+                "last_media_at": self.last_media_at,
             }
 
     def toggle_enabled(self) -> bool:
@@ -66,9 +68,17 @@ class AppState:
         with self.lock:
             self.last_block_at = time.time()
 
+    def mark_media(self) -> None:
+        with self.lock:
+            self.last_media_at = time.time()
+
     def cooldown_ok(self, seconds: float) -> bool:
         with self.lock:
             return (time.time() - self.last_block_at) >= seconds
+
+    def media_cooldown_ok(self, seconds: float) -> bool:
+        with self.lock:
+            return (time.time() - self.last_media_at) >= seconds
 
     def update_runtime(
         self,

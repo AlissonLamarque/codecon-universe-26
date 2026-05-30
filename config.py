@@ -6,6 +6,9 @@ POLL_INTERVAL_SECONDS = 0.30
 # Kept short so repeated productive attempts are blocked again quickly.
 BLOCK_COOLDOWN_SECONDS = 0.50
 PANIC_COOLDOWN_SECONDS = 1.2
+# Cooldown for opening relax media and sending alert notifications.
+# Keeps aggressive minimization without stacking browser tabs/notifications.
+MEDIA_COOLDOWN_SECONDS = 5.0
 
 # Escalation schedules (seconds)
 REST_SCHEDULE = [60, 180, 300, 480, 780, 1260, 2040, 2520]  # max 42 min
@@ -13,8 +16,7 @@ WORK_SCHEDULE = [360, 360, 300, 300, 240, 180, 120, 120]
 
 # Safety switches
 DEV_MODE = os.getenv("AB_DEV_MODE", "1") != "0"
-ENABLE_OVERLAY = os.getenv("AB_ENABLE_OVERLAY", "1") != "0"
-OVERLAY_SECONDS = 4
+ENABLE_OVERLAY = os.getenv("AB_ENABLE_NOTIFICATIONS", os.getenv("AB_ENABLE_OVERLAY", "1")) != "0"
 
 # Productive process names on Windows
 PRODUCTIVE_APPS = {

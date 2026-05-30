@@ -3,21 +3,23 @@ from __future__ import annotations
 import argparse
 import threading
 import time
+from typing import Callable
 
+from alert_agent import AlertContext, build_alert_message
 from app_state import AppState
 from config import (
     BLOCK_COOLDOWN_SECONDS,
     DEV_MODE,
     ENABLE_OVERLAY,
-    OVERLAY_SECONDS,
+    MEDIA_COOLDOWN_SECONDS,
     PANIC_COOLDOWN_SECONDS,
     POLL_INTERVAL_SECONDS,
+    RELAX_QUERIES,
 )
 from enforcer import block_productive_window, open_relax_urls
 from launcher import show_launcher
 from logger_utils import log_event
 from monitor import get_active_window_info
-from overlay import show_alert_overlay
 from policy import is_panic_target, should_block
 from state_machine import CycleState, REST_FORCED
 from tray_app import build_tray
@@ -54,7 +56,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--no-overlay",
         action="store_true",
-        help="Disable the flashing alert overlay.",
+        help="Disable alert notifications (legacy name).",
+    )
+    parser.add_argument(
+        "--no-notifications",
+        action="store_true",
+        dest="no_overlay",
+        help="Disable alert notifications.",
     )
     return parser.parse_args()
 
@@ -119,16 +127,76 @@ def resolve_startup_state(args: argparse.Namespace) -> AppState | None:
     return _from_launcher()
 
 
-def monitor_loop(state: AppState, request_menu_refresh) -> None:
+def monitor_loop(
+    state: AppState,
+    request_menu_refresh,
+    send_notification: Callable[[str, str], None],
+) -> None:
     resolver = YouTubeResolver()
     cycle = CycleState()
 
-    def _open_relax_media(reason: str, media_level: int) -> None:
-        if not state.snapshot()["enabled"]:
-            return
+    def _media_hint(media_level: int) -> str:
+        if not RELAX_QUERIES:
+            return "conteudo relaxante"
+        return RELAX_QUERIES[media_level % len(RELAX_QUERIES)]
+
+    def _alert_message(
+        event: str,
+        media_level: int,
+        *,
+        process_name: str | None = None,
+    ) -> str:
+        snap = state.snapshot()
+        return build_alert_message(
+            AlertContext(
+                event=event,
+                phase=cycle.phase,
+                cycle_index=cycle.cycle_index,
+                process_name=process_name,
+                media_hint=_media_hint(media_level),
+                panic_mode=snap["panic_mode"],
+                work_seconds=cycle.current_work_seconds(),
+                rest_seconds=cycle.current_rest_seconds(),
+            )
+        )
+
+    def _show_agent_message(reason: str, message: str) -> bool:
+        current = state.snapshot()
+        if not current["enabled"] or not current["overlay_enabled"]:
+            return False
+
+        send_notification("Anti-Burnout", message)
+        log_event("ALERT_SHOWN", reason=reason, message=message)
+        return True
+
+    def _run_relax_alert(
+        reason: str,
+        media_level: int,
+        *,
+        message: str | None = None,
+        respect_cooldown: bool = False,
+    ) -> bool:
+        current = state.snapshot()
+        if not current["enabled"]:
+            return False
+
+        if respect_cooldown and not state.media_cooldown_ok(MEDIA_COOLDOWN_SECONDS):
+            log_event(
+                "RELAX_MEDIA_SKIPPED",
+                level=media_level,
+                reason=reason,
+                cooldown_seconds=MEDIA_COOLDOWN_SECONDS,
+            )
+            return False
+
+        state.mark_media()
+
+        if message:
+            _show_agent_message(reason, message)
 
         open_relax_urls(resolver.resolve_for_level(media_level))
         log_event("RELAX_MEDIA_OPENED", level=media_level, reason=reason)
+        return True
 
     # Prime runtime values immediately so tray text starts correct.
     state.update_runtime(
@@ -140,7 +208,8 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
         work_seconds_current=cycle.current_work_seconds(),
     )
     log_event("APP_STARTED", dev_mode=state.dev_mode, panic_mode=state.panic_mode)
-    _open_relax_media("START", cycle.cycle_index)
+    time.sleep(1.0)
+    _show_agent_message("START", _alert_message("START", cycle.cycle_index))
 
     last_menu_refresh = 0.0
 
@@ -157,11 +226,16 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
 
         if transition == "ENTER_WORK":
             log_event("ENTER_WORK", cycle=cycle.cycle_index, work_seconds=cycle.current_work_seconds())
+            _show_agent_message("ENTER_WORK", _alert_message("ENTER_WORK", cycle.cycle_index))
         elif transition == "ENTER_REST":
             log_event("ENTER_REST", cycle=cycle.cycle_index, rest_seconds=cycle.current_rest_seconds())
-            _open_relax_media("ENTER_REST", cycle.cycle_index)
+            _run_relax_alert(
+                "ENTER_REST",
+                cycle.cycle_index,
+                message=_alert_message("ENTER_REST", cycle.cycle_index),
+            )
 
-        def _trigger_intervention(reason: str, message: str, media_level: int) -> None:
+        def _trigger_intervention(reason: str, media_level: int) -> None:
             if not state.snapshot()["enabled"]:
                 return
 
@@ -181,10 +255,12 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
             if not current["enabled"]:
                 return
 
-            if current["overlay_enabled"]:
-                show_alert_overlay(message, duration_seconds=OVERLAY_SECONDS)
-
-            _open_relax_media(reason, media_level)
+            _run_relax_alert(
+                reason,
+                media_level,
+                message=_alert_message(reason, media_level, process_name=info.process_name),
+                respect_cooldown=True,
+            )
 
         snap = state.snapshot()
         # In REST mode, keep intervention aggressive: every new productive attempt
@@ -195,13 +271,11 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
             if info and snap["panic_mode"] and is_panic_target(info.process_name):
                 _trigger_intervention(
                     reason="PANIC",
-                    message="MODO PANICO: VS CODE DETECTADO!\nINJETANDO DESCANSO FORCADO.",
                     media_level=max(cycle.cycle_index, 5),
                 )
             elif info and cycle.phase == REST_FORCED and should_block(info.process_name, snap["dev_mode"]):
                 _trigger_intervention(
                     reason="BLOCK",
-                    message="NIVEIS DE DOPAMINA CRITICAMENTE BAIXOS!\nDESCANSO OBRIGATORIO INICIADO.",
                     media_level=cycle.cycle_index,
                 )
 
@@ -239,7 +313,7 @@ def main() -> None:
 
     def on_toggle_overlay_mode() -> None:
         overlay_mode_now = state.toggle_overlay_enabled()
-        log_event("TOGGLE_OVERLAY_MODE", overlay_enabled=overlay_mode_now)
+        log_event("TOGGLE_NOTIFICATIONS", notifications_enabled=overlay_mode_now)
 
     def on_quit() -> None:
         state.stop()
@@ -254,9 +328,16 @@ def main() -> None:
         on_quit=on_quit,
     )
 
+    def send_notification(title: str, message: str) -> None:
+        try:
+            tray.notify(message, title=title)
+            log_event("NOTIFICATION_SENT", title=title, message=message)
+        except Exception as exc:
+            log_event("NOTIFICATION_FAILED", error=str(exc), title=title, message=message)
+
     worker = threading.Thread(
         target=monitor_loop,
-        args=(state, tray.update_menu),
+        args=(state, tray.update_menu, send_notification),
         daemon=True,
     )
     worker.start()

@@ -33,8 +33,8 @@ def _modes_text(state: AppState) -> str:
     snap = state.snapshot()
     dev = "ON" if snap["dev_mode"] else "OFF"
     panic = "ON" if snap["panic_mode"] else "OFF"
-    overlay = "ON" if snap["overlay_enabled"] else "OFF"
-    return f"Modo dev: {dev} | Modo panico: {panic} | Overlay: {overlay}"
+    notifications = "ON" if snap["overlay_enabled"] else "OFF"
+    return f"Modo dev: {dev} | Modo panico: {panic} | Notificacoes: {notifications}"
 
 
 def _create_icon_image() -> Image.Image:
@@ -93,9 +93,9 @@ def build_tray(
             checked=lambda item: state.snapshot()["panic_mode"],
         ),
         MenuItem(
-            "No overlay (desativa alerta piscante)",
+            "Notificacoes",
             _on_toggle_overlay,
-            checked=lambda item: not state.snapshot()["overlay_enabled"],
+            checked=lambda item: state.snapshot()["overlay_enabled"],
         ),
         MenuItem("Sair", _on_quit),
     )
