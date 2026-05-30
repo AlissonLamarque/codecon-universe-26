@@ -145,6 +145,7 @@ def monitor_loop(
         media_level: int,
         *,
         process_name: str | None = None,
+        attempt_count: int = 0,
     ) -> str:
         snap = state.snapshot()
         return build_alert_message(
@@ -157,6 +158,8 @@ def monitor_loop(
                 panic_mode=snap["panic_mode"],
                 work_seconds=cycle.current_work_seconds(),
                 rest_seconds=cycle.current_rest_seconds(),
+                attempt_count=attempt_count,
+                autocratic=attempt_count >= 2,
             )
         )
 
@@ -181,6 +184,8 @@ def monitor_loop(
             return False
 
         if respect_cooldown and not state.media_cooldown_ok(MEDIA_COOLDOWN_SECONDS):
+            if message:
+                _show_agent_message(reason, message)
             log_event(
                 "RELAX_MEDIA_SKIPPED",
                 level=media_level,
@@ -225,9 +230,11 @@ def monitor_loop(
         )
 
         if transition == "ENTER_WORK":
+            state.reset_rest_violations()
             log_event("ENTER_WORK", cycle=cycle.cycle_index, work_seconds=cycle.current_work_seconds())
             _show_agent_message("ENTER_WORK", _alert_message("ENTER_WORK", cycle.cycle_index))
         elif transition == "ENTER_REST":
+            state.reset_rest_violations()
             log_event("ENTER_REST", cycle=cycle.cycle_index, rest_seconds=cycle.current_rest_seconds())
             _run_relax_alert(
                 "ENTER_REST",
@@ -235,7 +242,7 @@ def monitor_loop(
                 message=_alert_message("ENTER_REST", cycle.cycle_index),
             )
 
-        def _trigger_intervention(reason: str, media_level: int) -> None:
+        def _trigger_intervention(reason: str, media_level: int, *, attempt_count: int = 0) -> None:
             if not state.snapshot()["enabled"]:
                 return
 
@@ -249,6 +256,8 @@ def monitor_loop(
                 pid=info.pid,
                 cycle=cycle.cycle_index,
                 phase=cycle.phase,
+                attempt_count=attempt_count,
+                autocratic=attempt_count >= 2,
             )
 
             current = state.snapshot()
@@ -258,7 +267,12 @@ def monitor_loop(
             _run_relax_alert(
                 reason,
                 media_level,
-                message=_alert_message(reason, media_level, process_name=info.process_name),
+                message=_alert_message(
+                    reason,
+                    media_level,
+                    process_name=info.process_name,
+                    attempt_count=attempt_count,
+                ),
                 respect_cooldown=True,
             )
 
@@ -274,9 +288,11 @@ def monitor_loop(
                     media_level=max(cycle.cycle_index, 5),
                 )
             elif info and cycle.phase == REST_FORCED and should_block(info.process_name, snap["dev_mode"]):
+                attempt_count = state.mark_rest_violation()
                 _trigger_intervention(
                     reason="BLOCK",
-                    media_level=cycle.cycle_index,
+                    media_level=cycle.cycle_index + max(0, attempt_count - 1),
+                    attempt_count=attempt_count,
                 )
 
         # Keep dynamic menu text (timers/status) in sync.

@@ -11,8 +11,8 @@ PANIC_COOLDOWN_SECONDS = 1.2
 MEDIA_COOLDOWN_SECONDS = 5.0
 
 # Escalation schedules (seconds)
-REST_SCHEDULE = [60, 180, 300, 480, 780, 1260, 2040, 2520]  # max 42 min
-WORK_SCHEDULE = [360, 360, 300, 300, 240, 180, 120, 120]
+REST_SCHEDULE = [20, 40, 60, 90, 120, 150, 180, 240]
+WORK_SCHEDULE = [60, 50, 45, 40, 35, 30, 25, 20]
 
 # Safety switches
 DEV_MODE = os.getenv("AB_DEV_MODE", "1") != "0"

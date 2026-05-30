@@ -29,7 +29,21 @@ If you build the executable, double-clicking `dist\\AntiBurnout.exe` also opens 
 5. `Sair` -> exit app.
 
 ## Alert agent
-The first version uses a local contextual alert agent. It generates natural-language Windows notifications for startup, work/rest transitions, panic mode, and productive-app blocks without requiring an LLM or internet access.
+By default, the app uses a local contextual alert agent. It can optionally call an LLM to generate more specific Windows notifications for the productive app and relax media.
+
+During a forced rest, repeated attempts to return to productive apps escalate the agent tone into a more autocratic "rest authority" mode.
+
+Enable LLM alerts:
+```powershell
+$env:OPENAI_API_KEY="your_api_key"
+$env:AB_ENABLE_LLM_ALERTS="1"
+# Optional:
+$env:AB_ALERT_MODEL="gpt-5.2"
+$env:AB_ALERT_TIMEOUT_SECONDS="2.5"
+python main.py
+```
+
+If the LLM call fails, times out, or is disabled, the local alert agent is used automatically.
 
 ## Optional CLI startup flags
 ```powershell
