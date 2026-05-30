@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from pathlib import Path
 from typing import Dict, List
 from urllib.parse import quote_plus
 from urllib.request import Request, urlopen
@@ -17,6 +18,10 @@ class YouTubeResolver:
     @staticmethod
     def _search_results_fallback(query: str) -> str:
         return f"https://www.youtube.com/results?search_query={quote_plus(query)}"
+
+    @staticmethod
+    def _local_relax_fallback() -> str:
+        return (Path(__file__).resolve().parent / "assets" / "relax.html").as_uri()
 
     @staticmethod
     def _watch_url(video_id: str) -> str:
@@ -37,7 +42,7 @@ class YouTubeResolver:
         )
 
         try:
-            with urlopen(req, timeout=8) as resp:
+            with urlopen(req, timeout=3) as resp:
                 html = resp.read().decode("utf-8", errors="ignore")
         except Exception:
             return None
@@ -59,7 +64,7 @@ class YouTubeResolver:
             self._cache[query] = resolved
             return resolved
 
-        self._cache[query] = self._search_results_fallback(query)
+        self._cache[query] = self._local_relax_fallback()
         return self._cache[query]
 
     def resolve_for_level(self, level: int) -> List[str]:
