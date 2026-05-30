@@ -108,6 +108,13 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
     resolver = YouTubeResolver()
     cycle = CycleState()
 
+    def _open_relax_media(reason: str, media_level: int) -> None:
+        if not state.snapshot()["enabled"]:
+            return
+
+        open_relax_urls(resolver.resolve_for_level(media_level))
+        log_event("RELAX_MEDIA_OPENED", level=media_level, reason=reason)
+
     # Prime runtime values immediately so tray text starts correct.
     state.update_runtime(
         phase=cycle.phase,
@@ -118,8 +125,7 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
         work_seconds_current=cycle.current_work_seconds(),
     )
     log_event("APP_STARTED", dev_mode=state.dev_mode, panic_mode=state.panic_mode)
-    open_relax_urls(resolver.resolve_for_level(cycle.cycle_index))
-    log_event("RELAX_MEDIA_OPENED", level=cycle.cycle_index, reason="START")
+    _open_relax_media("START", cycle.cycle_index)
 
     last_menu_refresh = 0.0
 
@@ -138,10 +144,12 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
             log_event("ENTER_WORK", cycle=cycle.cycle_index, work_seconds=cycle.current_work_seconds())
         elif transition == "ENTER_REST":
             log_event("ENTER_REST", cycle=cycle.cycle_index, rest_seconds=cycle.current_rest_seconds())
-            open_relax_urls(resolver.resolve_for_level(cycle.cycle_index))
-            log_event("RELAX_MEDIA_OPENED", level=cycle.cycle_index, reason="ENTER_REST")
+            _open_relax_media("ENTER_REST", cycle.cycle_index)
 
         def _trigger_intervention(reason: str, message: str, media_level: int) -> None:
+            if not state.snapshot()["enabled"]:
+                return
+
             block_productive_window(info.hwnd, info.pid)
             state.mark_block()
             log_event(
@@ -154,11 +162,14 @@ def monitor_loop(state: AppState, request_menu_refresh) -> None:
                 phase=cycle.phase,
             )
 
-            if snap["overlay_enabled"]:
+            current = state.snapshot()
+            if not current["enabled"]:
+                return
+
+            if current["overlay_enabled"]:
                 show_alert_overlay(message, duration_seconds=OVERLAY_SECONDS)
 
-            open_relax_urls(resolver.resolve_for_level(media_level))
-            log_event("RELAX_MEDIA_OPENED", level=media_level, reason=reason)
+            _open_relax_media(reason, media_level)
 
         snap = state.snapshot()
         # In REST mode, keep intervention aggressive: every new productive attempt

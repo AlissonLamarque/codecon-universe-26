@@ -22,7 +22,7 @@ Default behavior now opens a **launcher window** where you choose startup mode:
 If you build the executable, double-clicking `dist\\AntiBurnout.exe` also opens this launcher first.
 
 ## Tray controls (runtime)
-1. `Ativo` -> enable/disable blocking.
+1. `Ativo` -> enable/disable all interventions (blocking, overlay, and relax media).
 2. `Modo dev` -> safe mode for development.
 3. `Modo panico` -> force intervention on VSCode focus.
 4. `No overlay` -> toggle flashing overlay without restart.
