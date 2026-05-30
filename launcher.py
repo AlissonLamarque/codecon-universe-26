@@ -79,12 +79,12 @@ def show_launcher(
     options_frame.pack(fill="x", padx=14, pady=(0, 10))
 
     tk.Checkbutton(options_frame, text="Start active", variable=enabled_var).pack(anchor="w")
-    tk.Checkbutton(options_frame, text="Enable overlay alerts", variable=overlay_var).pack(anchor="w")
+    tk.Checkbutton(options_frame, text="Enable Windows notifications", variable=overlay_var).pack(anchor="w")
     tk.Checkbutton(options_frame, text="Start panic mode ON", variable=panic_var).pack(anchor="w")
 
     foot = tk.Label(
         root,
-        text="Tip: Toggle Dev/Panic/Overlay later from tray icon.",
+        text="Tip: Toggle Dev/Panic/Notifications later from tray icon.",
         font=("Segoe UI", 8),
     )
     foot.pack(pady=(2, 8))
