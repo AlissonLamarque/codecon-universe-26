@@ -1,0 +1,82 @@
+from __future__ import annotations
+
+import threading
+import time
+from dataclasses import dataclass, field
+
+
+@dataclass
+class AppState:
+    running: bool = True
+    enabled: bool = True
+    dev_mode: bool = True
+    panic_mode: bool = False
+    phase: str = "REST_FORCED"
+    cycle_index: int = 0
+    phase_remaining: int = 0
+    phase_total: int = 0
+    rest_seconds_current: int = 0
+    work_seconds_current: int = 0
+    last_block_at: float = 0.0
+    lock: threading.Lock = field(default_factory=threading.Lock)
+
+    def snapshot(self) -> dict:
+        with self.lock:
+            return {
+                "running": self.running,
+                "enabled": self.enabled,
+                "dev_mode": self.dev_mode,
+                "panic_mode": self.panic_mode,
+                "phase": self.phase,
+                "cycle_index": self.cycle_index,
+                "phase_remaining": self.phase_remaining,
+                "phase_total": self.phase_total,
+                "rest_seconds_current": self.rest_seconds_current,
+                "work_seconds_current": self.work_seconds_current,
+                "last_block_at": self.last_block_at,
+            }
+
+    def toggle_enabled(self) -> bool:
+        with self.lock:
+            self.enabled = not self.enabled
+            return self.enabled
+
+    def toggle_dev_mode(self) -> bool:
+        with self.lock:
+            self.dev_mode = not self.dev_mode
+            return self.dev_mode
+
+    def toggle_panic_mode(self) -> bool:
+        with self.lock:
+            self.panic_mode = not self.panic_mode
+            return self.panic_mode
+
+    def stop(self) -> None:
+        with self.lock:
+            self.running = False
+
+    def mark_block(self) -> None:
+        with self.lock:
+            self.last_block_at = time.time()
+
+    def cooldown_ok(self, seconds: float) -> bool:
+        with self.lock:
+            return (time.time() - self.last_block_at) >= seconds
+
+    def update_runtime(
+        self,
+        *,
+        phase: str,
+        cycle_index: int,
+        phase_remaining: int,
+        phase_total: int,
+        rest_seconds_current: int,
+        work_seconds_current: int,
+    ) -> None:
+        with self.lock:
+            self.phase = phase
+            self.cycle_index = cycle_index
+            self.phase_remaining = phase_remaining
+            self.phase_total = phase_total
+            self.rest_seconds_current = rest_seconds_current
+            self.work_seconds_current = work_seconds_current
