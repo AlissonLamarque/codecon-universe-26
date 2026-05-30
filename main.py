@@ -14,6 +14,7 @@ from config import (
     POLL_INTERVAL_SECONDS,
 )
 from enforcer import block_productive_window, open_relax_urls
+from launcher import show_launcher
 from logger_utils import log_event
 from monitor import get_active_window_info
 from overlay import show_alert_overlay
@@ -25,6 +26,21 @@ from youtube_resolver import YouTubeResolver
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Anti-Burnout app")
+    parser.add_argument(
+        "--launcher",
+        action="store_true",
+        help="Force startup launcher UI.",
+    )
+    parser.add_argument(
+        "--no-launcher",
+        action="store_true",
+        help="Skip launcher UI and start immediately.",
+    )
+    parser.add_argument(
+        "--profile",
+        choices=["dev", "live", "panic"],
+        help="Startup profile when skipping launcher.",
+    )
     parser.add_argument(
         "--live",
         action="store_true",
@@ -43,7 +59,52 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def monitor_loop(state: AppState, overlay_enabled: bool, request_menu_refresh) -> None:
+def resolve_startup_state(args: argparse.Namespace) -> AppState | None:
+    def _from_launcher() -> AppState | None:
+        launch = show_launcher(
+            default_dev_mode=DEV_MODE,
+            default_panic_mode=False,
+            default_overlay_enabled=ENABLE_OVERLAY,
+            default_enabled=True,
+        )
+        if launch is None:
+            return None
+        return AppState(
+            enabled=launch.enabled,
+            dev_mode=launch.dev_mode,
+            panic_mode=launch.panic_mode,
+            overlay_enabled=launch.overlay_enabled,
+        )
+
+    # Explicit launcher has highest priority.
+    if args.launcher and not args.no_launcher:
+        return _from_launcher()
+
+    # CLI explicit profile has top priority.
+    if args.profile == "dev":
+        return AppState(dev_mode=True, panic_mode=False, enabled=True, overlay_enabled=not args.no_overlay)
+    if args.profile == "live":
+        return AppState(dev_mode=False, panic_mode=False, enabled=True, overlay_enabled=not args.no_overlay)
+    if args.profile == "panic":
+        return AppState(dev_mode=False, panic_mode=True, enabled=True, overlay_enabled=not args.no_overlay)
+
+    # Backward compatibility CLI flags.
+    if args.live or args.dev or args.no_overlay or args.no_launcher:
+        if args.live:
+            dev_mode = False
+        elif args.dev:
+            dev_mode = True
+        else:
+            dev_mode = DEV_MODE
+
+        overlay_enabled = ENABLE_OVERLAY and not args.no_overlay
+        return AppState(dev_mode=dev_mode, overlay_enabled=overlay_enabled)
+
+    # Default behavior: one-click launcher UI.
+    return _from_launcher()
+
+
+def monitor_loop(state: AppState, request_menu_refresh) -> None:
     resolver = YouTubeResolver()
     cycle = CycleState()
 
@@ -93,7 +154,7 @@ def monitor_loop(state: AppState, overlay_enabled: bool, request_menu_refresh) -
                 phase=cycle.phase,
             )
 
-            if overlay_enabled:
+            if snap["overlay_enabled"]:
                 show_alert_overlay(message, duration_seconds=OVERLAY_SECONDS)
 
             open_relax_urls(resolver.resolve_for_level(media_level))
@@ -132,17 +193,9 @@ def monitor_loop(state: AppState, overlay_enabled: bool, request_menu_refresh) -
 
 def main() -> None:
     args = parse_args()
-
-    if args.live:
-        dev_mode = False
-    elif args.dev:
-        dev_mode = True
-    else:
-        dev_mode = DEV_MODE
-
-    overlay_enabled = ENABLE_OVERLAY and not args.no_overlay
-
-    state = AppState(dev_mode=dev_mode)
+    state = resolve_startup_state(args)
+    if state is None:
+        return
 
     def on_toggle() -> None:
         enabled = state.toggle_enabled()
@@ -156,6 +209,10 @@ def main() -> None:
         panic_mode_now = state.toggle_panic_mode()
         log_event("TOGGLE_PANIC_MODE", panic_mode=panic_mode_now)
 
+    def on_toggle_overlay_mode() -> None:
+        overlay_mode_now = state.toggle_overlay_enabled()
+        log_event("TOGGLE_OVERLAY_MODE", overlay_enabled=overlay_mode_now)
+
     def on_quit() -> None:
         state.stop()
         log_event("QUIT_CLICKED")
@@ -165,12 +222,13 @@ def main() -> None:
         on_toggle=on_toggle,
         on_toggle_dev_mode=on_toggle_dev_mode,
         on_toggle_panic_mode=on_toggle_panic_mode,
+        on_toggle_overlay_mode=on_toggle_overlay_mode,
         on_quit=on_quit,
     )
 
     worker = threading.Thread(
         target=monitor_loop,
-        args=(state, overlay_enabled, tray.update_menu),
+        args=(state, tray.update_menu),
         daemon=True,
     )
     worker.start()

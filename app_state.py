@@ -11,6 +11,7 @@ class AppState:
     enabled: bool = True
     dev_mode: bool = True
     panic_mode: bool = False
+    overlay_enabled: bool = True
     phase: str = "REST_FORCED"
     cycle_index: int = 0
     phase_remaining: int = 0
@@ -27,6 +28,7 @@ class AppState:
                 "enabled": self.enabled,
                 "dev_mode": self.dev_mode,
                 "panic_mode": self.panic_mode,
+                "overlay_enabled": self.overlay_enabled,
                 "phase": self.phase,
                 "cycle_index": self.cycle_index,
                 "phase_remaining": self.phase_remaining,
@@ -50,6 +52,11 @@ class AppState:
         with self.lock:
             self.panic_mode = not self.panic_mode
             return self.panic_mode
+
+    def toggle_overlay_enabled(self) -> bool:
+        with self.lock:
+            self.overlay_enabled = not self.overlay_enabled
+            return self.overlay_enabled
 
     def stop(self) -> None:
         with self.lock:

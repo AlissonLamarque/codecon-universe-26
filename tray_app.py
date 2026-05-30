@@ -33,7 +33,8 @@ def _modes_text(state: AppState) -> str:
     snap = state.snapshot()
     dev = "ON" if snap["dev_mode"] else "OFF"
     panic = "ON" if snap["panic_mode"] else "OFF"
-    return f"Modo dev: {dev} | Modo panico: {panic}"
+    overlay = "ON" if snap["overlay_enabled"] else "OFF"
+    return f"Modo dev: {dev} | Modo panico: {panic} | Overlay: {overlay}"
 
 
 def _create_icon_image() -> Image.Image:
@@ -49,6 +50,7 @@ def build_tray(
     on_toggle: Callable[[], None],
     on_toggle_dev_mode: Callable[[], None],
     on_toggle_panic_mode: Callable[[], None],
+    on_toggle_overlay_mode: Callable[[], None],
     on_quit: Callable[[], None],
 ) -> Icon:
     def _on_toggle(icon: Icon, item: MenuItem) -> None:
@@ -61,6 +63,10 @@ def build_tray(
 
     def _on_toggle_panic(icon: Icon, item: MenuItem) -> None:
         on_toggle_panic_mode()
+        icon.update_menu()
+
+    def _on_toggle_overlay(icon: Icon, item: MenuItem) -> None:
+        on_toggle_overlay_mode()
         icon.update_menu()
 
     def _on_quit(icon: Icon, item: MenuItem) -> None:
@@ -85,6 +91,11 @@ def build_tray(
             "Modo panico (forcar video no VSCode)",
             _on_toggle_panic,
             checked=lambda item: state.snapshot()["panic_mode"],
+        ),
+        MenuItem(
+            "No overlay (desativa alerta piscante)",
+            _on_toggle_overlay,
+            checked=lambda item: not state.snapshot()["overlay_enabled"],
         ),
         MenuItem("Sair", _on_quit),
     )
