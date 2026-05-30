@@ -1,26 +1,26 @@
-﻿# Guia Completo: Anti-Burnout com Python + pywin32 (Windows)
+# Guia Completo: Anti-Burnout com Python + pywin32 (Windows)
 
 ## 1. Objetivo
 Construir um app de bandeja (tray icon) no Windows que:
 1. Monitora a janela em foco.
 2. Detecta apps produtivos.
-3. Bloqueia durante descanso forÃ§ado.
+3. Bloqueia durante descanso forçado.
 4. Libera janelas curtas de produtividade.
-5. Escala o descanso atÃ© o teto (42 min).
-6. Permite **Ativar/Pausar/Sair** pelo Ã­cone da bandeja.
+5. Escala o descanso até o teto (42 min).
+6. Permite **Ativar/Pausar/Sair** pelo ícone da bandeja.
 
-Este guia estÃ¡ em ordem de execuÃ§Ã£o, do zero ao `.exe`.
+Este guia está em ordem de execução, do zero ao `.exe`.
 
 ---
 
-## 2. Por que pywin32 (mesmo com docs â€œfeiasâ€)
-`pywin32` Ã© um wrapper das APIs nativas do Windows. Para este caso, ele Ã© forte porque:
-1. Acesso direto Ã  janela em foco (`GetForegroundWindow`).
+## 2. Por que pywin32 (mesmo com docs “feias”)
+`pywin32` é um wrapper das APIs nativas do Windows. Para este caso, ele é forte porque:
+1. Acesso direto à janela em foco (`GetForegroundWindow`).
 2. Acesso ao PID da janela (`GetWindowThreadProcessId`).
 3. Controle de mensagens de janela (`PostMessage` com `WM_CLOSE`).
-4. Comportamento previsÃ­vel em Windows 10/11.
+4. Comportamento previsível em Windows 10/11.
 
-Em resumo: a documentaÃ§Ã£o visual pode ser antiga, mas a camada tÃ©cnica Ã© a certa para controlar janela/processo no Windows.
+Em resumo: a documentação visual pode ser antiga, mas a camada técnica é a certa para controlar janela/processo no Windows.
 
 ---
 
@@ -30,28 +30,28 @@ Em resumo: a documentaÃ§Ã£o visual pode ser antiga, mas a camada tÃ©cnica 
 2. Lista de apps produtivos.
 3. Estado `DESCANSO` vs `PRODUTIVIDADE`.
 4. Bloqueio (fecha janela/processo alvo).
-5. Abertura de vÃ­deo relaxante.
+5. Abertura de vídeo relaxante.
 6. Tray icon com `Ativar/Pausar/Sair`.
 7. Logs.
 
-### NÃ£o vai ter
-1. PersistÃªncia automÃ¡tica no boot.
-2. ProteÃ§Ã£o anti-bypass real.
-3. Modo serviÃ§o Windows (Session 0 atrapalha UI).
+### Não vai ter
+1. Persistência automática no boot.
+2. Proteção anti-bypass real.
+3. Modo serviço Windows (Session 0 atrapalha UI).
 
 ---
 
 ## 4. Arquitetura (componentes)
-1. `monitor.py`: lÃª janela em foco (`hwnd`, `pid`, nome do processo, tÃ­tulo).
-2. `policy.py`: decide se o processo Ã© produtivo.
+1. `monitor.py`: lê janela em foco (`hwnd`, `pid`, nome do processo, título).
+2. `policy.py`: decide se o processo é produtivo.
 3. `state_machine.py`: controla fases e timers.
-4. `enforcer.py`: aplica bloqueio e dispara distraÃ§Ã£o.
-5. `tray_app.py`: Ã­cone da bandeja e menu.
+4. `enforcer.py`: aplica bloqueio e dispara distração.
+5. `tray_app.py`: ícone da bandeja e menu.
 6. `main.py`: orquestra tudo.
 
 ---
 
-## 5. PrÃ©-requisitos
+## 5. Pré-requisitos
 1. Windows 10/11.
 2. Python 3.10+.
 3. PowerShell.
@@ -63,7 +63,7 @@ python -m venv .venv
 python -m pip install --upgrade pip
 ```
 
-### Instalar dependÃªncias
+### Instalar dependências
 ```powershell
 pip install pywin32 psutil pystray pillow
 ```
@@ -86,7 +86,7 @@ anti-burnout/
 
 ---
 
-## 7. ConfiguraÃ§Ã£o central (`config.py`)
+## 7. Configuração central (`config.py`)
 ```python
 PRODUCTIVE_APPS = {
     "Code.exe",
@@ -97,7 +97,7 @@ PRODUCTIVE_APPS = {
     "excel.exe",
 }
 
-# Descanso cresce por ciclo atÃ© 42 min (em segundos)
+# Descanso cresce por ciclo até 42 min (em segundos)
 REST_SCHEDULE = [60, 180, 300, 480, 780, 1260, 2040, 2520]
 
 # Produtividade encolhe no tempo (em segundos)
@@ -157,7 +157,7 @@ def is_productive(process_name: str | None) -> bool:
 
 ---
 
-## 10. MÃ¡quina de estados (`state_machine.py`)
+## 10. Máquina de estados (`state_machine.py`)
 ```python
 import time
 from dataclasses import dataclass
@@ -203,7 +203,7 @@ class CycleState:
 
 ---
 
-## 11. Enforcer (bloqueio e distraÃ§Ã£o) (`enforcer.py`)
+## 11. Enforcer (bloqueio e distração) (`enforcer.py`)
 ```python
 import subprocess
 import time
@@ -239,7 +239,7 @@ def block_productive_window(hwnd: int, pid: int):
     kill_process(pid)
 
 def open_relax_video(level: int):
-    # Quanto maior o nÃ­vel, mais caos: abre 1, 2 ou 3 vÃ­deos.
+    # Quanto maior o nível, mais caos: abre 1, 2 ou 3 vídeos.
     count = 1 if level < 3 else 2 if level < 6 else 3
     for i in range(count):
         url = VIDEO_URLS[i % len(VIDEO_URLS)]
@@ -248,7 +248,7 @@ def open_relax_video(level: int):
 
 ---
 
-## 12. Ãcone de bandeja com menu (`tray_app.py`)
+## 12. Ícone de bandeja com menu (`tray_app.py`)
 ```python
 from dataclasses import dataclass
 from pystray import Icon, Menu, MenuItem
@@ -284,7 +284,7 @@ def build_tray(ui_state: UiState):
 
 ---
 
-## 13. OrquestraÃ§Ã£o principal (`main.py`)
+## 13. Orquestração principal (`main.py`)
 ```python
 import json
 import os
@@ -344,15 +344,15 @@ if __name__ == "__main__":
 
 ---
 
-## 14. Ordem de execuÃ§Ã£o (resumo operacional)
-1. UsuÃ¡rio abre `main.py` (ou `.exe`).
+## 14. Ordem de execução (resumo operacional)
+1. Usuário abre `main.py` (ou `.exe`).
 2. App cria thread de monitoramento.
 3. App cria tray icon.
-4. Estado inicial Ã© `REST_FORCED`.
+4. Estado inicial é `REST_FORCED`.
 5. Se abrir app produtivo no descanso, bloqueia.
-6. Ao fim do descanso, entra em produtividade temporÃ¡ria.
-7. Ao fim da produtividade, volta ao descanso com nÃ­vel maior.
-8. UsuÃ¡rio pausa/ativa/sai pelo tray.
+6. Ao fim do descanso, entra em produtividade temporária.
+7. Ao fim da produtividade, volta ao descanso com nível maior.
+8. Usuário pausa/ativa/sai pelo tray.
 
 ---
 
@@ -363,7 +363,7 @@ python main.py
 ```
 
 ### Como encerrar
-1. Clique no Ã­cone da bandeja.
+1. Clique no ícone da bandeja.
 2. `Sair`.
 
 ---
@@ -374,72 +374,72 @@ pip install pyinstaller
 pyinstaller --onefile --windowed --name AntiBurnout main.py
 ```
 
-SaÃ­da padrÃ£o:
+Saída padrão:
 1. `dist\AntiBurnout.exe`
 
-ObservaÃ§Ã£o:
+Observação:
 1. Se faltar recurso no build, use `--collect-all pystray`.
 
 ---
 
-## 17. ExecutÃ¡vel vs ServiÃ§o (decisÃ£o final)
-### Use executÃ¡vel
-1. Roda na sessÃ£o do usuÃ¡rio (tem acesso Ã  UI).
-2. Funciona com tray icon e menu clicÃ¡vel.
+## 17. Executável vs Serviço (decisão final)
+### Use executável
+1. Roda na sessão do usuário (tem acesso à UI).
+2. Funciona com tray icon e menu clicável.
 3. Simples para hackathon.
 
-### NÃ£o use serviÃ§o no MVP
-1. ServiÃ§os rodam em Session 0.
-2. UI interativa (overlay/vÃ­deo/tray) fica problemÃ¡tica.
-3. Complexidade desnecessÃ¡ria para 1 dia.
+### Não use serviço no MVP
+1. Serviços rodam em Session 0.
+2. UI interativa (overlay/vídeo/tray) fica problemática.
+3. Complexidade desnecessária para 1 dia.
 
 ---
 
-## 18. Checklist de teste manual (rÃ¡pido)
-1. Abrir app, confirmar Ã­cone na bandeja.
+## 18. Checklist de teste manual (rápido)
+1. Abrir app, confirmar ícone na bandeja.
 2. Em descanso, abrir VS Code e ver bloqueio.
-3. Ver vÃ­deo abrir.
-4. Esperar transiÃ§Ã£o para produtividade e confirmar liberaÃ§Ã£o.
+3. Ver vídeo abrir.
+4. Esperar transição para produtividade e confirmar liberação.
 5. Esperar retorno ao descanso e confirmar escalonamento.
 6. Clicar `Ativo` para pausar e confirmar que para de bloquear.
 7. Clicar `Sair` e confirmar encerramento.
 
 ---
 
-## 19. Problemas comuns e correÃ§Ãµes
+## 19. Problemas comuns e correções
 1. **`ModuleNotFoundError: win32gui`**
-   - Reinstalar dependÃªncias no venv correto: `pip install pywin32`.
-2. **Processo nÃ£o bloqueia**
+   - Reinstalar dependências no venv correto: `pip install pywin32`.
+2. **Processo não bloqueia**
    - Conferir nome real do processo no log.
-3. **Abre vÃ­deo demais**
+3. **Abre vídeo demais**
    - Aumentar `POLL_INTERVAL_SECONDS` e adicionar cooldown por bloqueio.
-4. **Sem Ã­cone na bandeja**
+4. **Sem ícone na bandeja**
    - Verificar `pystray` + `pillow` instalados.
 5. **PowerShell mostra acento quebrado**
    - Normal de encoding do terminal; arquivo em UTF-8 pode estar correto.
 
 ---
 
-## 20. Hardening mÃ­nimo para nÃ£o â€œvirar vÃ­rusâ€ no dev
+## 20. Hardening mínimo para não “virar vírus” no dev
 1. Nunca iniciar com Windows automaticamente.
 2. Sempre ter menu `Ativo/Pausar/Sair`.
-3. Durante desenvolvimento, manter `Code.exe` fora da lista produtiva quando necessÃ¡rio.
-4. Logar todas as aÃ§Ãµes de bloqueio.
+3. Durante desenvolvimento, manter `Code.exe` fora da lista produtiva quando necessário.
+4. Logar todas as ações de bloqueio.
 5. Trabalhar em VM se quiser testar modo agressivo.
 
 ---
 
-## 21. APIs Win32 usadas (mapa rÃ¡pido)
+## 21. APIs Win32 usadas (mapa rápido)
 1. `win32gui.GetForegroundWindow`: pega `hwnd` ativo.
 2. `win32process.GetWindowThreadProcessId`: pega PID da janela.
-3. `win32gui.GetWindowText`: pega tÃ­tulo da janela.
+3. `win32gui.GetWindowText`: pega título da janela.
 4. `win32gui.PostMessage(..., WM_CLOSE, ...)`: pede fechamento gracioso.
 5. `win32con.WM_CLOSE`: constante da mensagem de fechamento.
 
 ---
 
-## 22. PrÃ³ximo passo direto
-Se quiser avanÃ§ar jÃ¡ com implementaÃ§Ã£o real no repositÃ³rio:
+## 22. Próximo passo direto
+Se quiser avançar já com implementação real no repositório:
 1. Eu crio os arquivos (`main.py`, `monitor.py`, etc.).
 2. Deixo rodando com tray icon funcional.
 3. Entrego com comando de build `.exe` validado.
