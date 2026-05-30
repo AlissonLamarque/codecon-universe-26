@@ -59,3 +59,11 @@ A mecânica do aplicativo é a materialização direta dessa filosofia. A técni
 ## Conclusão
 
 Não estamos construindo uma ferramenta para ajudar você a gerenciar seu tempo. Estamos construindo um escudo algorítmico contra o imperativo do desempenho. A melhor linha de código é aquela que o sistema não deixou você escrever porque você precisava dormir.
+
+## Referências
+
+HAN, Byung-Chul. **Sociedade do cansaço**.
+
+LAFARGUE, Paul. **O direito à preguiça**. 
+
+RUSSELL, Bertrand. **O elogio ao ócio**. 
