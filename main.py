@@ -27,6 +27,7 @@ from config import (
     SIDE_ALERT_BASE_SECONDS,
     SIDE_ALERT_ENABLED,
     SIDE_ALERT_MAX_SECONDS,
+    SIDE_ALERT_MIN_REPLACE_SECONDS,
     SIDE_ALERT_RIGHT_MARGIN,
     SIDE_ALERT_STAGE_STEP_SECONDS,
     SIDE_ALERT_SUBTITLE,
@@ -53,7 +54,7 @@ from enforcer import block_productive_window, close_window, focus_relax_window, 
 from launcher import show_launcher
 from logger_utils import log_event
 from monitor import find_windows_by_pid, get_active_window_info, get_window_info
-from overlay import dismiss_side_alert_note, show_intervention_popup, show_intervention_popup_storm, show_side_alert_note
+from overlay import show_intervention_popup, show_intervention_popup_storm, show_side_alert_note
 from policy import is_panic_target, should_block
 from state_machine import CycleState, REST_FORCED
 from tray_app import build_tray
@@ -549,6 +550,8 @@ def monitor_loop(
             text += "."
         return text
 
+    last_side_alert_at = 0.0
+
     def _maybe_show_side_alert(
         reason: str,
         message: str | None,
@@ -557,10 +560,27 @@ def monitor_loop(
         attempt_count: int = 0,
         added_rest: int = 0,
     ) -> None:
+        nonlocal last_side_alert_at
         if not SIDE_ALERT_ENABLED:
             return
         if reason not in {"ENTER_REST", "BLOCK", "RELAX_ESCAPE", "PANIC"}:
             return
+
+        min_replace = max(0.0, float(SIDE_ALERT_MIN_REPLACE_SECONDS))
+        now = time.time()
+        # Keep side panel readable: do not recreate it too quickly on repeated blocks.
+        if min_replace > 0 and reason in {"BLOCK", "RELAX_ESCAPE"} and (now - last_side_alert_at) < min_replace:
+            log_event(
+                "SIDE_ALERT_SKIPPED_COOLDOWN",
+                reason=reason,
+                since_last=round(now - last_side_alert_at, 3),
+                min_replace=min_replace,
+                madness_stage=madness_stage,
+                attempt_count=attempt_count,
+                added_rest=added_rest,
+            )
+            return
+
         text = _normalize_side_alert_text(reason, message, added_rest=added_rest)
         if not text:
             return
@@ -574,6 +594,7 @@ def monitor_loop(
             title=(SIDE_ALERT_TITLE or "Espirito de Epicuro"),
             subtitle=(SIDE_ALERT_SUBTITLE or "Ataraxia assistida"),
         )
+        last_side_alert_at = now
         log_event(
             "SIDE_ALERT_SHOWN",
             reason=reason,
@@ -594,9 +615,6 @@ def monitor_loop(
         current = state.snapshot()
         if not current["enabled"] or not current["overlay_enabled"]:
             return False
-
-        # Hide persistent side note while the centered intervention popup is visible.
-        dismiss_side_alert_note()
 
         duration = _popup_duration_seconds(reason, attempt_count, added_rest)
         copies = _popup_storm_copies(madness_stage, attempt_count)

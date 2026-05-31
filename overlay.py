@@ -3,6 +3,7 @@ from __future__ import annotations
 import threading
 import time
 import tkinter as tk
+from pathlib import Path
 
 _SIDE_NOTE_LOCK = threading.Lock()
 _SIDE_NOTE_TOKEN = 0
@@ -15,9 +16,14 @@ def _next_side_note_token() -> int:
         return _SIDE_NOTE_TOKEN
 
 
-def _is_side_note_token_current(token: int) -> bool:
-    with _SIDE_NOTE_LOCK:
-        return token == _SIDE_NOTE_TOKEN
+def _debug_overlay_error(context: str, exc: Exception) -> None:
+    try:
+        log_dir = Path("logs")
+        log_dir.mkdir(parents=True, exist_ok=True)
+        with (log_dir / "overlay_errors.log").open("a", encoding="utf-8") as fh:
+            fh.write(f"{time.strftime('%Y-%m-%d %H:%M:%S')} | {context} | {type(exc).__name__}: {exc}\n")
+    except Exception:
+        pass
 
 
 def _spawn_intervention_popup(
@@ -27,6 +33,13 @@ def _spawn_intervention_popup(
     offset_x: int = 0,
     offset_y: int = 0,
     flash: bool = False,
+    width: int = 560,
+    height: int = 180,
+    anchor_right: bool = False,
+    right_margin: int = 22,
+    top_ratio: float = 0.16,
+    title_text: str = "Agente Anti-Burnout",
+    subtitle_text: str = "",
 ) -> threading.Event:
     done = threading.Event()
     body_text = (message or "Voce esta produtivo demais. Hora de descansar.").strip()
@@ -41,15 +54,19 @@ def _spawn_intervention_popup(
             root.attributes("-topmost", True)
             root.configure(bg="#0b1220")
 
-            width = 560
-            height = 180
+            popup_width = max(320, int(width))
+            popup_height = max(120, int(height))
             screen_w = root.winfo_screenwidth()
             screen_h = root.winfo_screenheight()
-            x = int((screen_w - width) / 2) + int(offset_x)
-            y = int((screen_h - height) / 2) + int(offset_y)
-            x = max(8, min(x, max(8, screen_w - width - 8)))
-            y = max(8, min(y, max(8, screen_h - height - 8)))
-            root.geometry(f"{width}x{height}+{x}+{y}")
+            if anchor_right:
+                x = screen_w - popup_width - max(8, int(right_margin))
+                y = int(screen_h * max(0.05, min(0.8, float(top_ratio))))
+            else:
+                x = int((screen_w - popup_width) / 2) + int(offset_x)
+                y = int((screen_h - popup_height) / 2) + int(offset_y)
+            x = max(8, min(x, max(8, screen_w - popup_width - 8)))
+            y = max(8, min(y, max(8, screen_h - popup_height - 8)))
+            root.geometry(f"{popup_width}x{popup_height}+{x}+{y}")
 
             card = tk.Frame(root, bg="#111827", bd=2, relief="solid")
             card.pack(fill="both", expand=True, padx=2, pady=2)
@@ -64,12 +81,24 @@ def _spawn_intervention_popup(
 
             title = tk.Label(
                 top_row,
-                text="Agente Anti-Burnout",
+                text=title_text,
                 fg="#f8fafc",
                 bg="#111827",
                 font=("Segoe UI", 12, "bold"),
             )
             title.pack(side="left", padx=(10, 0))
+
+            if subtitle_text.strip():
+                subtitle = tk.Label(
+                    card,
+                    text=subtitle_text.strip(),
+                    fg="#93c5fd",
+                    bg="#111827",
+                    font=("Segoe UI", 9),
+                    anchor="w",
+                    justify="left",
+                )
+                subtitle.pack(fill="x", padx=14, pady=(0, 4))
 
             body = tk.Label(
                 card,
@@ -77,7 +106,7 @@ def _spawn_intervention_popup(
                 fg="#e5e7eb",
                 bg="#111827",
                 font=("Segoe UI", 11),
-                wraplength=520,
+                wraplength=max(220, popup_width - 40),
                 justify="left",
                 anchor="w",
             )
@@ -96,8 +125,8 @@ def _spawn_intervention_popup(
             duration_ms = max(500, int(final_seconds * 1000))
             root.after(duration_ms, root.destroy)
             root.mainloop()
-        except Exception:
-            pass
+        except Exception as exc:
+            _debug_overlay_error("spawn_intervention_popup", exc)
         finally:
             done.set()
 
@@ -171,92 +200,20 @@ def show_side_alert_note(
     Show a persistent right-side note with the latest intervention text.
     New calls replace previous notes.
     """
-    token = _next_side_note_token()
+    _next_side_note_token()
     body_text = (message or "Descanso obrigatorio em andamento.").strip()
-
-    def _run() -> None:
-        try:
-            root = tk.Tk()
-            root.title("Anti-Burnout Note")
-            root.overrideredirect(True)
-            root.attributes("-topmost", True)
-            root.configure(bg="#0b1220")
-            try:
-                root.attributes("-alpha", 0.97)
-            except Exception:
-                pass
-
-            width = 440
-            height = 220
-            screen_w = root.winfo_screenwidth()
-            screen_h = root.winfo_screenheight()
-            x = max(8, screen_w - width - max(8, int(right_margin)))
-            y = max(8, min(int(screen_h * max(0.05, min(0.8, top_ratio))), screen_h - height - 8))
-            root.geometry(f"{width}x{height}+{x}+{y}")
-
-            card = tk.Frame(root, bg="#0f172a", bd=2, relief="solid")
-            card.pack(fill="both", expand=True, padx=2, pady=2)
-
-            top_row = tk.Frame(card, bg="#0f172a")
-            top_row.pack(fill="x", padx=12, pady=(10, 6))
-
-            avatar = tk.Canvas(top_row, width=34, height=34, bg="#0f172a", highlightthickness=0)
-            avatar.create_oval(2, 2, 32, 32, fill="#e11d48", outline="")
-            avatar.create_text(17, 17, text="AB", fill="white", font=("Segoe UI", 8, "bold"))
-            avatar.pack(side="left")
-
-            title = tk.Label(
-                top_row,
-                text=(title or "Espirito de Epicuro").strip(),
-                fg="#f8fafc",
-                bg="#0f172a",
-                font=("Segoe UI", 10, "bold"),
-            )
-            title.pack(side="left", padx=(8, 0))
-
-            subtitle = tk.Label(
-                card,
-                text=(subtitle or "Ataraxia assistida").strip(),
-                fg="#93c5fd",
-                bg="#0f172a",
-                font=("Segoe UI", 9),
-                anchor="w",
-                justify="left",
-            )
-            subtitle.pack(fill="x", padx=12, pady=(0, 6))
-
-            body = tk.Label(
-                card,
-                text=body_text,
-                fg="#e5e7eb",
-                bg="#0f172a",
-                font=("Segoe UI", 10),
-                wraplength=400,
-                justify="left",
-                anchor="nw",
-            )
-            body.pack(fill="both", expand=True, padx=12, pady=(0, 12))
-
-            start = time.time()
-
-            def _tick() -> None:
-                if not root.winfo_exists():
-                    return
-                if not _is_side_note_token_current(token):
-                    root.destroy()
-                    return
-                elapsed = time.time() - start
-                if elapsed >= max(1.5, float(duration_seconds)):
-                    root.destroy()
-                    return
-                root.after(220, _tick)
-
-            root.after(180, _tick)
-            root.mainloop()
-        except Exception:
-            pass
-
-    threading.Thread(target=_run, daemon=True).start()
+    _spawn_intervention_popup(
+        body_text,
+        duration_seconds=max(1.5, float(duration_seconds)),
+        width=440,
+        height=220,
+        flash=False,
+        anchor_right=True,
+        right_margin=max(8, int(right_margin)),
+        top_ratio=max(0.05, min(0.8, float(top_ratio))),
+        title_text=(title or "Espirito de Epicuro").strip(),
+        subtitle_text=(subtitle or "Ataraxia assistida").strip(),
+    )
 
 
 def dismiss_side_alert_note() -> None:
