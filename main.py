@@ -196,6 +196,7 @@ def monitor_loop(
     relax_primary_hwnd: int | None = None
     relax_session_active = False
     relax_media_stage_opened = -1
+    rest_madness_peak_stage = 0
     relax_browser_processes = {name.lower() for name in RELAX_BROWSER_PROCESSES}
     relax_title_keywords = tuple(keyword.lower() for keyword in RELAX_TITLE_KEYWORDS)
     ignored_browser_titles = {"default ime", "msctfime ui"}
@@ -213,31 +214,42 @@ def monitor_loop(
         )
 
     def _madness_stage(reason: str, media_level: int, attempt_count: int) -> int:
+        nonlocal rest_madness_peak_stage
+
+        # Base progression is mostly tied to repeated disobedience attempts.
+        # Keep media_level influence very small to avoid sudden jumps.
         score = max(0, int(attempt_count) - 1)
         if reason == "RELAX_ESCAPE":
             score += 1
         elif reason == "PANIC":
-            score += 3
+            score += 2
 
-        # Later cycles also start slightly more chaotic.
-        score += max(0, media_level // 3)
+        # Later cycles start slightly more chaotic, but gently.
+        score += max(0, cycle.cycle_index // 2)
+        score += max(0, int(media_level) // 12)
 
-        # Start slower, then accelerate stage growth so media rotation
-        # becomes more frequent after user keeps insisting.
-        if score < 3:
-            return 0
-        if score < 5:
-            return 1
-        if score < 7:
-            return 2
-        if score < 9:
-            return 3
-        if score < 12:
-            return 4
+        # Slower stage ramp: avoid jumping from nature directly to max chaos.
+        if score < 4:
+            stage = 0
+        elif score < 8:
+            stage = 1
+        elif score < 12:
+            stage = 2
+        elif score < 16:
+            stage = 3
+        elif score < 22:
+            stage = 4
+        else:
+            # Infinite escalation, but with smoother increments.
+            stage = 5 + ((score - 22) // 4)
 
-        # Infinite escalation: once absurd tier is reached, grow faster
-        # (new stage each +2 score) to rotate videos more aggressively.
-        return 5 + ((score - 12) // 2)
+        # During a forced-rest block, madness cannot go backwards.
+        if cycle.phase == REST_FORCED and reason in {"BLOCK", "RELAX_ESCAPE", "PANIC"}:
+            if stage < rest_madness_peak_stage:
+                stage = rest_madness_peak_stage
+            else:
+                rest_madness_peak_stage = stage
+        return stage
 
     def _media_hint(media_level: int, reason: str, attempt_count: int) -> str:
         stage = _madness_stage(reason, media_level, attempt_count)
@@ -986,11 +998,13 @@ def monitor_loop(
         if transition == "ENTER_WORK":
             state.reset_rest_violations()
             _clear_relax_tracking()
+            rest_madness_peak_stage = 0
             log_event("ENTER_WORK", cycle=cycle.cycle_index, work_seconds=cycle.current_work_seconds())
             _show_agent_message("ENTER_WORK", _alert_message("ENTER_WORK", cycle.cycle_index), force_toast=True)
         elif transition == "ENTER_REST":
             state.reset_rest_violations()
             _clear_relax_tracking()
+            rest_madness_peak_stage = 0
             log_event("ENTER_REST", cycle=cycle.cycle_index, rest_seconds=cycle.current_rest_seconds())
             _run_relax_alert(
                 "ENTER_REST",

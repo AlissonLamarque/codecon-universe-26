@@ -115,8 +115,12 @@ class YouTubeResolver:
         if stage == 2:
             return "satisfying visual anti-burnout"
         if stage == 3:
-            return "meme caos anti-burnout"
-        return "shitpost dopamina forcada anti-burnout"
+            return "loop estranho anti-burnout"
+        if stage == 4:
+            return "brainrot leve anti-burnout"
+        if stage == 5:
+            return "brainrot medio anti-burnout"
+        return "caos maximo anti-burnout"
 
     def _queries_for_stage(self, stage: int) -> List[str]:
         tiers = [tier for tier in RELAX_QUERY_TIERS if tier]
