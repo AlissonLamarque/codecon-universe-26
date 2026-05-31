@@ -12,6 +12,9 @@ def show_intervention_popup(message: str, duration_seconds: float = 1.2) -> None
     """
 
     done = threading.Event()
+    body_text = (message or "Voce esta produtivo demais. Hora de descansar.").strip()
+    adaptive_seconds = min(3.8, 0.9 + (len(body_text) / 52.0))
+    final_seconds = max(float(duration_seconds), adaptive_seconds)
 
     def _run() -> None:
         try:
@@ -51,7 +54,7 @@ def show_intervention_popup(message: str, duration_seconds: float = 1.2) -> None
 
             body = tk.Label(
                 card,
-                text=(message or "Voce esta produtivo demais. Hora de descansar."),
+                text=body_text,
                 fg="#e5e7eb",
                 bg="#111827",
                 font=("Segoe UI", 11),
@@ -61,7 +64,7 @@ def show_intervention_popup(message: str, duration_seconds: float = 1.2) -> None
             )
             body.pack(fill="both", expand=True, padx=14, pady=(0, 12))
 
-            duration_ms = max(400, int(float(duration_seconds) * 1000))
+            duration_ms = max(500, int(final_seconds * 1000))
             root.after(duration_ms, root.destroy)
             root.mainloop()
         except Exception:
@@ -70,7 +73,7 @@ def show_intervention_popup(message: str, duration_seconds: float = 1.2) -> None
             done.set()
 
     threading.Thread(target=_run, daemon=True).start()
-    done.wait(timeout=max(1.0, float(duration_seconds) + 0.8))
+    done.wait(timeout=max(1.3, final_seconds + 0.9))
 
 
 def show_alert_overlay(message: str, duration_seconds: int = 4) -> None:
