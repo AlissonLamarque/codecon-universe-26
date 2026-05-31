@@ -18,6 +18,7 @@ Default behavior now opens a **launcher window** where you choose startup mode:
 1. `Dev safe` (does not block VSCode/terminal)
 2. `Live normal`
 3. `Panic demo` (aggressive VSCode intervention)
+4. `Alert Message Mode` (`Frases prontas` local or `Ollama` LLM local)
 
 If you build the executable, double-clicking `dist\\AntiBurnout.exe` also opens this launcher first.
 
