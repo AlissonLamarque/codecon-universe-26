@@ -54,14 +54,8 @@ pip install -r requirements.txt
 python main.py
 ```
 
-<<<<<<< Updated upstream
-Default behavior now opens a **launcher window** where you choose startup mode:
-1. `Dev safe` (does not block VSCode/terminal)
-2. `Live normal`
-3. `Panic demo` (aggressive VSCode intervention)
-=======
 Ao iniciar, o app abre um launcher com perfis de uso:
->>>>>>> Stashed changes
+
 
 1. `Dev safe`: modo seguro para desenvolvimento, sem bloquear VS Code/terminal.
 2. `Live normal`: aplica contenção durante períodos de descanso.
@@ -78,21 +72,7 @@ Depois de iniciado, o app fica na bandeja do Windows.
 4. `Notificações`: liga/desliga alertas sem reiniciar o app.
 5. `Sair`: encerra o app.
 
-<<<<<<< Updated upstream
-Enable LLM alerts:
-```powershell
-$env:OPENAI_API_KEY="your_api_key"
-$env:AB_ENABLE_LLM_ALERTS="1"
-# Optional:
-$env:AB_ALERT_MODEL="gpt-5.2"
-$env:AB_ALERT_TIMEOUT_SECONDS="2.5"
-python main.py
-```
 
-If the LLM call fails, times out, or is disabled, the local alert agent is used automatically.
-
-## Optional CLI startup flags
-=======
 ## Alertas
 
 Por padrão, o Anti-Burnout usa frases locais, rápidas e estáveis. Esse modo é
@@ -115,7 +95,6 @@ continuar funcionando.
 
 ## Flags Úteis
 
->>>>>>> Stashed changes
 ```powershell
 python main.py --no-launcher --profile dev
 python main.py --no-launcher --profile live
