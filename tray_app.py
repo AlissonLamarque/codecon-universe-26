@@ -56,6 +56,7 @@ def build_tray(
     on_toggle_dev_mode: Callable[[], None],
     on_toggle_panic_mode: Callable[[], None],
     on_toggle_overlay_mode: Callable[[], None],
+    on_toggle_timer_overlay: Callable[[], None],
     on_quit: Callable[[], None],
 ) -> Icon:
     def _on_toggle(icon: Icon, item: MenuItem) -> None:
@@ -72,6 +73,10 @@ def build_tray(
 
     def _on_toggle_overlay(icon: Icon, item: MenuItem) -> None:
         on_toggle_overlay_mode()
+        icon.update_menu()
+
+    def _on_toggle_timer_overlay(icon: Icon, item: MenuItem) -> None:
+        on_toggle_timer_overlay()
         icon.update_menu()
 
     def _on_quit(icon: Icon, item: MenuItem) -> None:
@@ -101,6 +106,11 @@ def build_tray(
             "Notificacoes",
             _on_toggle_overlay,
             checked=lambda item: state.snapshot()["overlay_enabled"],
+        ),
+        MenuItem(
+            "Timer Flutuante",
+            _on_toggle_timer_overlay,
+            checked=lambda item: state.snapshot()["timer_overlay_enabled"],
         ),
         MenuItem("Sair", _on_quit),
     )
