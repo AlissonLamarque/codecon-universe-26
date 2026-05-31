@@ -235,8 +235,8 @@ def format_report(data: ReportData) -> str:
     # ── Header do relatório ──
     lines.append("")
     lines.append("╔" + "═" * (REPORT_WIDTH - 2) + "╗")
-    lines.append("║" + "RELATÓRIO EXECUTIVO DE PREVENÇÃO AO OVERWORK".center(REPORT_WIDTH - 2) + "║")
-    lines.append("║" + "Método Comodoro™ — Departamento de Métricas Sérias".center(REPORT_WIDTH - 2) + "║")
+    lines.append("║" + "RELATÓRIO DE DESCULPAS PARA NÃO TRABALHAR (NADA CONFIÁVEL)".center(REPORT_WIDTH - 2) + "║")
+    lines.append("║" + "Método Comodoro™ — Depto. de Dados Tirados da Cartola".center(REPORT_WIDTH - 2) + "║")
     lines.append("╚" + "═" * (REPORT_WIDTH - 2) + "╝")
 
     # ── Período de análise ──
@@ -313,16 +313,19 @@ def format_report(data: ReportData) -> str:
     # ── Disclaimer ──
     lines.append("─" * REPORT_WIDTH)
     lines.append(
-        "  AVISO LEGAL: Este relatório foi gerado pelo Departamento de Métricas"
+        "  🚨 AVISO DE CONFIABILIDADE NULA 🚨"
     )
     lines.append(
-        "  Sérias do Método Comodoro™. Os dados aqui apresentados possuem"
+        "  Este relatório foi gerado com base em puro achismo e algoritmos"
     )
     lines.append(
-        "  rigor científico equivalente ao de um horóscopo empresarial."
+        "  altamente duvidosos. As métricas não fazem o menor sentido e"
     )
     lines.append(
-        "  Qualquer semelhança com métricas reais é mera coincidência."
+        "  NÃO DEVEM ser usadas para absolutamente nenhuma decisão séria."
+    )
+    lines.append(
+        "  Qualquer semelhança com a realidade é apenas uma falha na Matrix."
     )
     lines.append("─" * REPORT_WIDTH)
     lines.append("")
@@ -370,7 +373,7 @@ def show_report_window(log_path: str | None = None) -> None:
 
             # ── Janela principal ──
             root = tk.Tk()
-            root.title("Método Comodoro™ — Painel Executivo")
+            root.title("Método Comodoro™ — Painel de Desculpas para o Chefe")
             root.configure(bg=BG_DARK)
             root.attributes("-topmost", True)
             root.resizable(False, False)
@@ -445,8 +448,15 @@ def show_report_window(log_path: str | None = None) -> None:
                 ).pack(side="right", padx=(0, 10), pady=6)
 
             # ── Conteúdo Texto (Esquerda) ──
-            add_title(content, "📊  RELATÓRIO EXECUTIVO")
-            add_subtitle(content, "Departamento de Métricas Sérias  •  Método Comodoro™")
+            add_title(content, "📊  RELATÓRIO NADA CONFIÁVEL")
+            add_subtitle(content, "Depto de Dados Tirados da Cartola  •  Método Comodoro™")
+            add_separator(content)
+            add_section_heading(content, "🚨 AVISO IMPORTANTE")
+            tk.Label(
+                content, text="Os números abaixo são puro achismo corporativo e não possuem nenhuma validade científica, matemática ou lógica. Use-os apenas para rir ou enganar a si mesmo.",
+                fg="#D32F2F", bg=BG_DARK, font=(FONT_FAMILY, 9, "italic"),
+                wraplength=380, justify="left"
+            ).pack(fill="x", padx=10, pady=(0, 6))
             add_separator(content)
 
             add_section_heading(content, "PERÍODO DE ANÁLISE")
@@ -480,6 +490,10 @@ def show_report_window(log_path: str | None = None) -> None:
             tk.Label(
                 ioe_frame, text=classification, fg=FG_VALUE, bg=BG_CARD,
                 font=(FONT_FAMILY, 9), wraplength=350, justify="center",
+            ).pack(pady=(0, 2))
+            tk.Label(
+                ioe_frame, text="* Fórmula tirada diretamente da cabeça do estagiário.", fg=FG_DIM, bg=BG_CARD,
+                font=(FONT_FAMILY, 8, "italic"), wraplength=350, justify="center",
             ).pack(pady=(0, 6))
 
             # Botão fechar na esquerda
@@ -503,27 +517,35 @@ def show_report_window(log_path: str | None = None) -> None:
             noise = np.random.normal(0, 5, len(x_stress))
             stress_level = np.clip(base_stress + noise, 0, 100)
             
-            ax1.plot(x_stress, stress_level, color="#2FD34D", linewidth=2, marker='o', markersize=3)
+            ax1.plot(x_stress, stress_level, color="#FF00FF", linewidth=3, marker='x', markersize=6)
             ax1.set_title("Nível de Estresse Residual (%)", color=FG_VALUE, pad=10, fontsize=10, fontweight="bold")
             ax1.tick_params(colors=FG_LABEL, labelsize=8)
             ax1.spines["top"].set_visible(False)
             ax1.spines["right"].set_visible(False)
             ax1.spines["bottom"].set_color("#E0E0E0")
             ax1.spines["left"].set_color("#E0E0E0")
-            ax1.set_ylim(0, 110)
+            ax1.set_ylim(-50, 300) # Limite que não faz sentido
 
             # Gráfico 2: Alocação de Tempo (Pizza)
             ax2 = fig.add_subplot(222, facecolor=BG_DARK)
             fake_work_minutes = data.completed_cycles * 0.5  # mock para fingir que trabalhou algo
             rest_min = max(0.1, data.total_rest_minutes)
             labels = ["Descanso Merecido", "Trabalho (infelizmente)"]
-            sizes = [rest_min, fake_work_minutes]
-            colors = ["#2FD34D", "#9E9E9E"]
-            explode = (0.1, 0)
+            
+            # Para a fatia menor ser visualmente a maior, passamos o inverso
+            # E adicionamos um número extra pra nunca fechar 100%
+            visual_sizes = [1 / max(0.1, rest_min), 1 / max(0.1, fake_work_minutes), 0.5] 
+            labels.append("O que faltava pra 100%")
+            
+            # Cores que não fazem sentido (Rosa choque, Verde limão, Marrom)
+            colors = ["#FF1493", "#7FFF00", "#8B4513"]
+            explode = (0.2, -0.1, 0.4)
+            
             wedges, texts, autotexts = ax2.pie(
-                sizes, explode=explode, labels=labels, colors=colors,
-                autopct="%1.1f%%", shadow=True, startangle=140,
-                textprops=dict(color="w", fontsize=9)
+                visual_sizes, explode=explode, labels=labels, colors=colors,
+                autopct=lambda p: f"{(p * 3.14) + 73:.1f}%", # Matemática inventada
+                shadow=True, startangle=27,
+                textprops=dict(color="#000000", fontsize=9, fontweight="bold")
             )
             ax2.set_title("Distribuição do Tempo", color=FG_VALUE, pad=10, fontsize=10, fontweight="bold")
 
@@ -533,10 +555,11 @@ def show_report_window(log_path: str | None = None) -> None:
                 top_apps = data.blocked_apps.most_common(5)
                 apps = [k for k, v in top_apps][::-1]
                 counts = [v for k, v in top_apps][::-1]
-                bars = ax3.barh(apps, counts, color="#2FD34D", edgecolor="#2FD34D")
+                # Cores ciano com borda vermelha
+                bars = ax3.barh(apps, counts, color="#00FFFF", edgecolor="#FF0000")
                 for bar in bars:
                     width = bar.get_width()
-                    ax3.annotate(f"{int(width)}x",
+                    ax3.annotate(f"{int(width * 42)}x", # Multiplica por 42 pra fingir que foi muito mais
                                  xy=(width, bar.get_y() + bar.get_height() / 2),
                                  xytext=(3, 0), textcoords="offset points",
                                  ha="left", va="center", color=FG_VALUE, fontsize=8)
@@ -569,10 +592,15 @@ def show_report_window(log_path: str | None = None) -> None:
                 sizes_i = [1]
                 labels_i = ["Sem intervenções"]
             
-            colors_i = ["#027617", "#2FD34D", "#9E9E9E", "#757575"]
+            # Fazer o menor valor ter a maior fatia
+            sizes_i_visual = [1 / max(0.1, s) for s in sizes_i]
+            
+            # Cores aleatórias e feias (Amarelo, Roxo, Azul, Laranja neon)
+            colors_i = ["#FFFF00", "#800080", "#0000FF", "#FF4500"]
             wedges2, texts2, autotexts2 = ax4.pie(
-                sizes_i, labels=labels_i, colors=colors_i, autopct="%1.1f%%",
-                startangle=90, textprops=dict(color="w", fontsize=8), pctdistance=0.85
+                sizes_i_visual, labels=labels_i, colors=colors_i, 
+                autopct=lambda p: f"{p + 142.7:.1f}%", # Nunca fecha 100%
+                startangle=90, textprops=dict(color="#000000", fontsize=8, fontweight="bold"), pctdistance=0.85
             )
             # Desenha círculo no centro para criar o Donut
             centre_circle = plt.Circle((0, 0), 0.70, fc=BG_DARK)
