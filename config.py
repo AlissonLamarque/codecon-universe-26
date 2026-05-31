@@ -10,6 +10,7 @@ RELAX_ESCAPE_COOLDOWN_SECONDS = 0.8
 # Cooldown for opening relax media and sending alert notifications.
 # Keeps aggressive minimization without stacking browser tabs/notifications.
 MEDIA_COOLDOWN_SECONDS = 5.0
+PRE_BLOCK_POPUP_SECONDS = 1.2
 
 # Escalation schedules (seconds)
 REST_SCHEDULE = [60, 40, 60, 90, 120, 150, 180, 240]

@@ -14,6 +14,7 @@ from config import (
     MEDIA_COOLDOWN_SECONDS,
     PANIC_COOLDOWN_SECONDS,
     POLL_INTERVAL_SECONDS,
+    PRE_BLOCK_POPUP_SECONDS,
     RELAX_BROWSER_PROCESSES,
     RELAX_ESCAPE_COOLDOWN_SECONDS,
     RELAX_MAX_SIMULTANEOUS_VIDEOS,
@@ -24,6 +25,7 @@ from enforcer import block_productive_window, focus_relax_window, open_relax_url
 from launcher import show_launcher
 from logger_utils import log_event
 from monitor import find_windows_by_pid, get_active_window_info, get_window_info
+from overlay import show_intervention_popup
 from policy import is_panic_target, should_block
 from state_machine import CycleState, REST_FORCED
 from tray_app import build_tray
@@ -182,6 +184,22 @@ def monitor_loop(
         send_notification("Anti-Burnout", message)
         log_event("ALERT_SHOWN", reason=reason, message=message)
         return True
+
+    def _show_pre_block_popup(reason: str, message: str) -> bool:
+        current = state.snapshot()
+        if not current["enabled"] or not current["overlay_enabled"]:
+            return False
+        try:
+            show_intervention_popup(message, duration_seconds=PRE_BLOCK_POPUP_SECONDS)
+            log_event(
+                "PRE_BLOCK_POPUP_SHOWN",
+                reason=reason,
+                duration_seconds=PRE_BLOCK_POPUP_SECONDS,
+            )
+            return True
+        except Exception as exc:
+            log_event("PRE_BLOCK_POPUP_FAILED", reason=reason, error=str(exc))
+            return False
 
     def _looks_like_relax_window(process_name: str | None, title: str | None) -> bool:
         process = (process_name or "").strip().lower()
@@ -505,6 +523,15 @@ def monitor_loop(
             if not state.snapshot()["enabled"]:
                 return
 
+            alert_text = _alert_message(
+                reason,
+                media_level,
+                process_name=info.process_name,
+                attempt_count=attempt_count,
+            )
+
+            _show_pre_block_popup(reason, alert_text)
+
             block_productive_window(info.hwnd, info.pid)
             state.mark_block()
             log_event(
@@ -526,12 +553,7 @@ def monitor_loop(
             _run_relax_alert(
                 reason,
                 media_level,
-                message=_alert_message(
-                    reason,
-                    media_level,
-                    process_name=info.process_name,
-                    attempt_count=attempt_count,
-                ),
+                message=alert_text,
                 respect_cooldown=not force_media_open,
                 reuse_existing_window=reuse_existing_window,
             )
