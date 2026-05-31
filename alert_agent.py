@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import json
 import os
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 
-_LLM_CACHE: dict[tuple[str, int, str | None, str | None, str, str], str] = {}
+_LLM_CACHE: dict[tuple[object, ...], str] = {}
 
 
 @dataclass(frozen=True)
@@ -60,7 +63,18 @@ def _env_enabled(name: str, default: str = "0") -> bool:
 
 
 def _llm_enabled() -> bool:
-    return _env_enabled("AB_ENABLE_LLM_ALERTS") and bool(os.getenv("OPENAI_API_KEY"))
+    return _env_enabled("AB_ENABLE_LLM_ALERTS")
+
+
+def _backend_mode() -> str:
+    mode = os.getenv("AB_ALERT_BACKEND", "auto").strip().lower()
+    if mode in {"auto", "ollama", "openai", "local"}:
+        return mode
+    return "auto"
+
+
+def _openai_enabled() -> bool:
+    return bool(os.getenv("OPENAI_API_KEY"))
 
 
 def _llm_model() -> str:
@@ -72,6 +86,60 @@ def _llm_timeout_seconds() -> float:
         return float(os.getenv("AB_ALERT_TIMEOUT_SECONDS", "2.5"))
     except ValueError:
         return 2.5
+
+
+def _ollama_enabled() -> bool:
+    return _env_enabled("AB_ENABLE_OLLAMA_ALERTS", "1") and bool(_ollama_model())
+
+
+def _ollama_model() -> str:
+    return os.getenv("AB_OLLAMA_MODEL", "qwen2.5:1.5b-instruct")
+
+
+def _ollama_base_url() -> str:
+    return os.getenv("AB_OLLAMA_BASE_URL", "http://localhost:11434").strip().rstrip("/")
+
+
+def _ollama_timeout_seconds() -> float:
+    try:
+        return float(os.getenv("AB_OLLAMA_TIMEOUT_SECONDS", "2.2"))
+    except ValueError:
+        return 2.2
+
+
+def _ollama_keep_alive() -> str:
+    return os.getenv("AB_OLLAMA_KEEP_ALIVE", "10m")
+
+
+def _llm_system_instructions() -> str:
+    return (
+        "Voce e o agente de controle de burnout de um app satirico. "
+        "Seu trabalho e desencorajar produtividade excessiva com humor leve, "
+        "sem parecer conselho medico serio e sem soar agressivo."
+    )
+
+
+def _build_alert_prompt(context: AlertContext) -> str:
+    app = _app_label(context.process_name)
+    media = _media_label(context.media_hint)
+    return (
+        "Gere uma notificacao curta em portugues do Brasil para o app Anti-Burnout.\n"
+        f"Evento: {context.event}\n"
+        f"Fase atual: {context.phase}\n"
+        f"Ciclo: {context.cycle_index + 1}\n"
+        f"App produtivo detectado: {app}\n"
+        f"Conteudo relaxante de destino: {media}\n"
+        f"Modo panico: {context.panic_mode}\n"
+        f"Tempo de trabalho atual em segundos: {context.work_seconds}\n"
+        f"Tempo de descanso atual em segundos: {context.rest_seconds}\n"
+        f"Tentativas produtivas neste descanso: {context.attempt_count}\n"
+        f"Tom autocratico: {context.autocratic}\n"
+        "A mensagem deve mudar conforme o app e o conteudo relaxante.\n"
+        "Tom base: satirico, calmo, carismatico, anti-produtividade.\n"
+        "Se Tom autocratico for verdadeiro, fale como uma autoridade burocratica do descanso: "
+        "firme, absurda e teatral, mas sem ameacas reais.\n"
+        "Limites: 1 ou 2 frases, no maximo 220 caracteres, sem markdown, sem emoji."
+    )
 
 
 def _clean_message(text: str) -> str:
@@ -153,11 +221,87 @@ def _local_alert_message(context: AlertContext) -> str:
     )
 
 
+def _openai_alert_message(prompt: str) -> str | None:
+    if not _openai_enabled():
+        return None
+
+    try:
+        from openai import OpenAI
+
+        client = OpenAI(timeout=_llm_timeout_seconds(), max_retries=0)
+        response = client.responses.create(
+            model=_llm_model(),
+            instructions=_llm_system_instructions(),
+            input=prompt,
+        )
+    except Exception:
+        return None
+
+    message = _clean_message(getattr(response, "output_text", ""))
+    if not message:
+        return None
+    return message
+
+
+def _ollama_alert_message(prompt: str) -> str | None:
+    if not _ollama_enabled():
+        return None
+
+    payload = {
+        "model": _ollama_model(),
+        "prompt": prompt,
+        "system": _llm_system_instructions(),
+        "stream": False,
+        "keep_alive": _ollama_keep_alive(),
+        "options": {
+            "temperature": 0.9,
+            "num_predict": 90,
+        },
+    }
+    body = json.dumps(payload).encode("utf-8")
+    url = f"{_ollama_base_url()}/api/generate"
+    request = Request(url, data=body, headers={"Content-Type": "application/json"}, method="POST")
+
+    try:
+        with urlopen(request, timeout=_ollama_timeout_seconds()) as response:
+            raw = response.read().decode("utf-8", errors="ignore")
+    except (HTTPError, URLError, TimeoutError, OSError):
+        return None
+    except Exception:
+        return None
+
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        return None
+
+    if isinstance(parsed, dict) and parsed.get("error"):
+        return None
+
+    message = _clean_message(str(parsed.get("response", "")) if isinstance(parsed, dict) else "")
+    if not message:
+        return None
+    return message
+
+
+def _backend_order() -> list[str]:
+    mode = _backend_mode()
+    if mode == "local":
+        return []
+    if mode == "openai":
+        return ["openai"]
+    if mode == "ollama":
+        return ["ollama"]
+    return ["ollama", "openai"]
+
+
 def _llm_alert_message(context: AlertContext) -> str | None:
     if not _llm_enabled():
         return None
 
+    mode = _backend_mode()
     key = (
+        mode,
         context.event,
         context.cycle_index,
         context.process_name,
@@ -168,49 +312,25 @@ def _llm_alert_message(context: AlertContext) -> str | None:
     if key in _LLM_CACHE:
         return _LLM_CACHE[key]
 
-    app = _app_label(context.process_name)
-    media = _media_label(context.media_hint)
-    prompt = (
-        "Gere uma notificacao curta em portugues do Brasil para o app Anti-Burnout.\n"
-        f"Evento: {context.event}\n"
-        f"Fase atual: {context.phase}\n"
-        f"Ciclo: {context.cycle_index + 1}\n"
-        f"App produtivo detectado: {app}\n"
-        f"Conteudo relaxante de destino: {media}\n"
-        f"Modo panico: {context.panic_mode}\n"
-        f"Tempo de trabalho atual em segundos: {context.work_seconds}\n"
-        f"Tempo de descanso atual em segundos: {context.rest_seconds}\n"
-        f"Tentativas produtivas neste descanso: {context.attempt_count}\n"
-        f"Tom autocratico: {context.autocratic}\n"
-        "A mensagem deve mudar conforme o app e o conteudo relaxante.\n"
-        "Tom base: satirico, calmo, carismatico, anti-produtividade.\n"
-        "Se Tom autocratico for verdadeiro, fale como uma autoridade burocratica do descanso: "
-        "firme, absurda e teatral, mas sem ameacas reais.\n"
-        "Limites: 1 ou 2 frases, no maximo 220 caracteres, sem markdown, sem emoji."
-    )
+    prompt = _build_alert_prompt(context)
 
-    try:
-        from openai import OpenAI
+    generated: str | None = None
+    for backend in _backend_order():
+        if backend == "ollama":
+            generated = _ollama_alert_message(prompt)
+        elif backend == "openai":
+            generated = _openai_alert_message(prompt)
+        else:
+            generated = None
 
-        client = OpenAI(timeout=_llm_timeout_seconds(), max_retries=0)
-        response = client.responses.create(
-            model=_llm_model(),
-            instructions=(
-                "Voce e o agente de controle de burnout de um app satirico. "
-                "Seu trabalho e desencorajar produtividade excessiva com humor leve, "
-                "sem parecer conselho medico serio e sem soar agressivo."
-            ),
-            input=prompt,
-        )
-    except Exception:
+        if generated:
+            break
+
+    if not generated:
         return None
 
-    message = _clean_message(getattr(response, "output_text", ""))
-    if not message:
-        return None
-
-    _LLM_CACHE[key] = message
-    return message
+    _LLM_CACHE[key] = generated
+    return generated
 
 
 def build_alert_message(context: AlertContext) -> str:
