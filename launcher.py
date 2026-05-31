@@ -13,17 +13,17 @@ class LaunchOptions:
 
 
 PALETTE = {
-    "root_bg": "#0b1220",
-    "card_bg": "#f8fafc",
-    "border": "#dbe1ea",
-    "title": "#0f172a",
-    "muted": "#475569",
-    "accent": "#2563eb",
-    "accent_soft": "#dbeafe",
-    "ok": "#16a34a",
-    "ok_hover": "#15803d",
-    "cancel": "#64748b",
-    "cancel_hover": "#475569",
+    "root_bg": "#F5F5F5",
+    "card_bg": "#FFFFFF",
+    "border": "#E0E0E0",
+    "title": "#000000",
+    "muted": "#757575",
+    "accent": "#D32F2F",
+    "accent_soft": "#FFEBEE",
+    "ok": "#D32F2F",
+    "ok_hover": "#B71C1C",
+    "cancel": "#9E9E9E",
+    "cancel_hover": "#757575",
 }
 
 

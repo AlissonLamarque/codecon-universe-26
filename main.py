@@ -23,11 +23,13 @@ from config import (
 )
 from enforcer import block_productive_window, focus_relax_window, open_relax_urls
 from launcher import show_launcher
-from logger_utils import log_event
+from logger_utils import get_last_log, log_event
 from monitor import find_windows_by_pid, get_active_window_info, get_window_info
-from overlay import show_intervention_popup
+from overlay import show_intervention_popup, show_rest_overlay
+from report import show_report_window
 from policy import is_panic_target, should_block
 from state_machine import CycleState, REST_FORCED
+from timer_overlay import TimerOverlayController
 from tray_app import build_tray
 from youtube_resolver import YouTubeResolver
 
@@ -140,6 +142,8 @@ def monitor_loop(
 ) -> None:
     resolver = YouTubeResolver()
     cycle = CycleState()
+    rest_overlay_ctrl = None  # Controlador do overlay de descanso ativo
+    timer_overlay_ctrl = TimerOverlayController(state)
     relax_window_hwnds: set[int] = set()
     relax_window_pids: set[int] = set()
     relax_primary_hwnd: int | None = None
@@ -492,6 +496,11 @@ def monitor_loop(
         )
 
         if transition == "ENTER_WORK":
+            # Fecha o overlay de descanso (se ainda estiver aberto)
+            if rest_overlay_ctrl and not rest_overlay_ctrl.is_closed:
+                rest_overlay_ctrl.close()
+                rest_overlay_ctrl = None
+
             state.reset_rest_violations()
             relax_window_hwnds.clear()
             relax_window_pids.clear()
@@ -499,7 +508,21 @@ def monitor_loop(
             relax_session_active = False
             log_event("ENTER_WORK", cycle=cycle.cycle_index, work_seconds=cycle.current_work_seconds())
             _show_agent_message("ENTER_WORK", _alert_message("ENTER_WORK", cycle.cycle_index))
+
+            # Exibe a janela de relatório de métricas ao entrar em produtividade
+            show_report_window()
+
         elif transition == "ENTER_REST":
+            # Detecta o último app bloqueado para mensagens contextuais
+            last_log = get_last_log()
+            last_app = last_log.get("process") if last_log else None
+
+            # Abre o overlay fullscreen de descanso com memes rotativos
+            rest_overlay_ctrl = show_rest_overlay(
+                duration_seconds=cycle.current_rest_seconds(),
+                app_name=last_app,
+            )
+
             state.reset_rest_violations()
             relax_window_hwnds.clear()
             relax_window_pids.clear()
@@ -604,6 +627,10 @@ def monitor_loop(
                 pass
             last_menu_refresh = now
 
+        snap = state.snapshot()
+        if snap.get("timer_overlay_enabled", False) and not timer_overlay_ctrl.is_active:
+            timer_overlay_ctrl.start()
+
         time.sleep(POLL_INTERVAL_SECONDS)
 
     log_event("APP_STOPPED")
@@ -631,6 +658,10 @@ def main() -> None:
         overlay_mode_now = state.toggle_overlay_enabled()
         log_event("TOGGLE_NOTIFICATIONS", notifications_enabled=overlay_mode_now)
 
+    def on_toggle_timer_overlay() -> None:
+        timer_mode_now = state.toggle_timer_overlay()
+        log_event("TOGGLE_TIMER_OVERLAY", timer_enabled=timer_mode_now)
+
     def on_quit() -> None:
         state.stop()
         log_event("QUIT_CLICKED")
@@ -641,6 +672,7 @@ def main() -> None:
         on_toggle_dev_mode=on_toggle_dev_mode,
         on_toggle_panic_mode=on_toggle_panic_mode,
         on_toggle_overlay_mode=on_toggle_overlay_mode,
+        on_toggle_timer_overlay=on_toggle_timer_overlay,
         on_quit=on_quit,
     )
 
