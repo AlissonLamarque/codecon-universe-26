@@ -114,15 +114,37 @@ def _local_alert_message(context: AlertContext) -> str:
         )
 
     if context.event == "BLOCK":
-        if context.autocratic:
+        attempt = max(1, context.attempt_count)
+        if attempt == 1:
             return (
-                f"Ordem de descanso #{context.attempt_count}: {app} esta suspenso temporariamente.\n"
-                f"Voce sera redirecionado para {media}. A produtividade perdeu o direito de recurso."
+                f"{app} detectado durante descanso obrigatorio.\n"
+                f"Voce ta produtivo demais. Bora relaxar com {media} por um momento."
             )
-
+        if attempt == 2:
+            return (
+                "PARA de querer produzir, seu macaco do commit.\n"
+                f"Volte para {media} e finja tranquilidade por alguns instantes."
+            )
         return (
-            f"{app} detectado durante descanso obrigatorio.\n"
-            f"O sistema recomenda {media}, agua e uma breve renegociacao com sua postura."
+            f"Ordem de descanso #{attempt}: insistencia produtiva detectada em {app}.\n"
+            f"{media} foi reaberto. A produtividade perdeu o direito de recurso."
+        )
+
+    if context.event == "RELAX_ESCAPE":
+        attempt = max(1, context.attempt_count)
+        if attempt == 1:
+            return (
+                "Tentativa de fuga detectada: essa nao e a janela oficial do descanso.\n"
+                f"Retornando para {media}."
+            )
+        if attempt == 2:
+            return (
+                "Trocar de aba nao conta como descanso, colega.\n"
+                f"Volte para {media} e respire antes de outra tentativa."
+            )
+        return (
+            f"Protocolo anti-gambiarra #{attempt} ativado.\n"
+            "PARA de querer produzir e volte para a janela de relax agora."
         )
 
     return (
