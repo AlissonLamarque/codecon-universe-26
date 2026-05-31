@@ -17,10 +17,12 @@ class AppState:
     phase_remaining: int = 0
     phase_total: int = 0
     rest_seconds_current: int = 0
+    rest_extension_seconds: int = 0
     work_seconds_current: int = 0
     last_block_at: float = 0.0
     last_media_at: float = 0.0
     rest_violation_count: int = 0
+    last_alert_backend: str = "local"
     lock: threading.Lock = field(default_factory=threading.Lock)
 
     def snapshot(self) -> dict:
@@ -36,10 +38,12 @@ class AppState:
                 "phase_remaining": self.phase_remaining,
                 "phase_total": self.phase_total,
                 "rest_seconds_current": self.rest_seconds_current,
+                "rest_extension_seconds": self.rest_extension_seconds,
                 "work_seconds_current": self.work_seconds_current,
                 "last_block_at": self.last_block_at,
                 "last_media_at": self.last_media_at,
                 "rest_violation_count": self.rest_violation_count,
+                "last_alert_backend": self.last_alert_backend,
             }
 
     def toggle_enabled(self) -> bool:
@@ -99,6 +103,7 @@ class AppState:
         phase_remaining: int,
         phase_total: int,
         rest_seconds_current: int,
+        rest_extension_seconds: int,
         work_seconds_current: int,
     ) -> None:
         with self.lock:
@@ -107,4 +112,9 @@ class AppState:
             self.phase_remaining = phase_remaining
             self.phase_total = phase_total
             self.rest_seconds_current = rest_seconds_current
+            self.rest_extension_seconds = rest_extension_seconds
             self.work_seconds_current = work_seconds_current
+
+    def set_last_alert_backend(self, backend: str) -> None:
+        with self.lock:
+            self.last_alert_backend = (backend or "local").strip().lower()
