@@ -10,6 +10,7 @@ class LaunchOptions:
     dev_mode: bool
     panic_mode: bool
     overlay_enabled: bool
+    alert_backend: str
 
 
 PALETTE = {
@@ -48,6 +49,7 @@ def show_launcher(
     default_panic_mode: bool = False,
     default_overlay_enabled: bool = True,
     default_enabled: bool = True,
+    default_alert_backend: str = "local",
 ) -> LaunchOptions | None:
     """
     Returns LaunchOptions when user clicks Start.
@@ -107,6 +109,7 @@ def show_launcher(
     enabled_var = tk.BooleanVar(value=default_enabled)
     overlay_var = tk.BooleanVar(value=default_overlay_enabled)
     panic_var = tk.BooleanVar(value=default_panic_mode)
+    alert_backend_var = tk.StringVar(value="ollama" if default_alert_backend == "ollama" else "local")
 
     profile_frame = tk.LabelFrame(
         card,
@@ -179,6 +182,33 @@ def show_launcher(
     tk.Checkbutton(options_frame, text="Enable Windows notifications", variable=overlay_var, **check_style).pack(anchor="w")
     tk.Checkbutton(options_frame, text="Start panic mode ON", variable=panic_var, **check_style).pack(anchor="w")
 
+    llm_frame = tk.LabelFrame(
+        card,
+        text="Alert Message Mode",
+        padx=10,
+        pady=8,
+        font=("Segoe UI", 9, "bold"),
+        fg=PALETTE["title"],
+        bg=PALETTE["card_bg"],
+        bd=1,
+    )
+    llm_frame.pack(fill="x", pady=(0, 10))
+
+    tk.Radiobutton(
+        llm_frame,
+        text="Frases prontas (local, mais estavel)",
+        variable=alert_backend_var,
+        value="local",
+        **radio_style,
+    ).pack(anchor="w")
+    tk.Radiobutton(
+        llm_frame,
+        text="Ollama (LLM local, mais dinamico)",
+        variable=alert_backend_var,
+        value="ollama",
+        **radio_style,
+    ).pack(anchor="w")
+
     preview_box = tk.Frame(card, bg=PALETTE["accent_soft"], bd=0, padx=12, pady=10)
     preview_box.pack(fill="x", pady=(0, 10))
     preview_title = tk.Label(
@@ -214,12 +244,14 @@ def show_launcher(
         enabled_line = "Engine: ON at startup" if enabled_var.get() else "Engine: OFF at startup"
         notif_line = "Notifications: ON" if overlay_var.get() else "Notifications: OFF"
         panic_line = "Panic switch: ON" if panic_var.get() else "Panic switch: OFF"
-        preview_var.set(f"{profile_line}\n{enabled_line} | {notif_line} | {panic_line}")
+        backend_line = "Alerts: Ollama" if alert_backend_var.get() == "ollama" else "Alerts: Frases prontas"
+        preview_var.set(f"{profile_line}\n{enabled_line} | {notif_line} | {panic_line}\n{backend_line}")
 
     profile_var.trace_add("write", _update_preview)
     enabled_var.trace_add("write", _update_preview)
     overlay_var.trace_add("write", _update_preview)
     panic_var.trace_add("write", _update_preview)
+    alert_backend_var.trace_add("write", _update_preview)
     _update_preview()
 
     foot = tk.Label(
@@ -251,6 +283,7 @@ def show_launcher(
             dev_mode=dev_mode,
             panic_mode=panic_mode,
             overlay_enabled=overlay_var.get(),
+            alert_backend=alert_backend_var.get(),
         )
         root.destroy()
 
