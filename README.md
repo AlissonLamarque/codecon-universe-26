@@ -9,6 +9,8 @@ python -m venv .venv
 pip install -r requirements.txt
 ```
 
+Optional (if you want local LLM via Ollama): see [GUIA_OLLAMA_RAPIDO.md](GUIA_OLLAMA_RAPIDO.md).
+
 ## Run
 ```powershell
 python main.py
@@ -42,6 +44,8 @@ Set `AB_ENABLE_LLM_ALERTS=1` and choose backend with `AB_ALERT_BACKEND`:
 4. `local`: disables LLM completely.
 
 ### Option A: Ollama local (no token cost)
+Detailed short guide: [GUIA_OLLAMA_RAPIDO.md](GUIA_OLLAMA_RAPIDO.md)
+
 ```powershell
 # one-time (after installing Ollama):
 ollama pull qwen2.5:1.5b-instruct
