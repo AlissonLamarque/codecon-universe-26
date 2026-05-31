@@ -25,8 +25,9 @@ def _status_text(state: AppState) -> str:
 def _rest_work_text(state: AppState) -> str:
     snap = state.snapshot()
     rest = _format_time(snap["rest_seconds_current"])
+    extra = _format_time(snap.get("rest_extension_seconds", 0))
     work = _format_time(snap["work_seconds_current"])
-    return f"Descanso {rest} | Trabalho {work}"
+    return f"Descanso {rest} (+{extra}) | Trabalho {work}"
 
 
 def _modes_text(state: AppState) -> str:
@@ -34,7 +35,11 @@ def _modes_text(state: AppState) -> str:
     dev = "ON" if snap["dev_mode"] else "OFF"
     panic = "ON" if snap["panic_mode"] else "OFF"
     notifications = "ON" if snap["overlay_enabled"] else "OFF"
-    return f"Modo dev: {dev} | Modo panico: {panic} | Notificacoes: {notifications}"
+    backend = str(snap.get("last_alert_backend", "local") or "local").strip().upper()
+    return (
+        f"Modo dev: {dev} | Modo panico: {panic} | Notificacoes: {notifications} | "
+        f"Backend alerta: {backend}"
+    )
 
 
 def _create_icon_image() -> Image.Image:

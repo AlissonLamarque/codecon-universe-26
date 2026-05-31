@@ -76,13 +76,14 @@ def _launch_dedicated_relax_window(url: str) -> RelaxLaunch:
         relax_profile = Path.cwd()
 
     if exe_name in {"chrome.exe", "brave.exe", "msedge.exe"}:
-        # Isolated profile + app window keeps relax session separate from normal browsing.
+        # Isolated profile + regular window is more reliable for YouTube playback.
+        # App mode (`--app`) can get stuck in perpetual loading on some setups.
         args = [
             browser_exe,
             f"--user-data-dir={str(relax_profile)}",
             "--no-first-run",
             "--new-window",
-            f"--app={url}",
+            url,
         ]
     elif exe_name == "firefox.exe":
         args = [browser_exe, "-new-window", url]
@@ -140,6 +141,16 @@ def focus_relax_window(hwnd: int, *, maximize: bool = True) -> bool:
             return True
         except Exception:
             return False
+
+
+def close_window(hwnd: int) -> bool:
+    try:
+        if not win32gui.IsWindow(hwnd):
+            return False
+        win32gui.PostMessage(hwnd, win32con.WM_CLOSE, 0, 0)
+        return True
+    except Exception:
+        return False
 
 
 def block_productive_window(hwnd: int, pid: int) -> None:
